@@ -195,14 +195,20 @@ pyrightconfig.json
 !frontend/src/lib/
 
 ### Svelte / Frontend ###
-# gitignore template for the SvelteKit, frontend web component framework
+# gitignore template for SvelteKit
 # website: https://kit.svelte.dev/
 
 .svelte-kit/
 node_modules/
-frontend/dist/
-frontend/dist-ssr/
-frontend/.env*.local
+frontend/build/
+frontend/.output/
+frontend/.vercel/
+frontend/.netlify/
+frontend/.wrangler/
+frontend/.env
+frontend/.env.*
+!frontend/.env.example
+!frontend/.env.test
 
 ### Windows ###
 # Windows thumbnail cache files

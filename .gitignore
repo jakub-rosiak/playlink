@@ -191,12 +191,18 @@ poetry.toml
 # LSP config files
 pyrightconfig.json
 
-### Svelte ###
+# Svelte / Frontend — allow src/lib within frontend
+!frontend/src/lib/
+
+### Svelte / Frontend ###
 # gitignore template for the SvelteKit, frontend web component framework
 # website: https://kit.svelte.dev/
 
 .svelte-kit/
-package
+node_modules/
+frontend/dist/
+frontend/dist-ssr/
+frontend/.env*.local
 
 ### Windows ###
 # Windows thumbnail cache files

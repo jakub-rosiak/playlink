@@ -12,6 +12,8 @@ RUN pnpm run build
 FROM base AS runtime
 COPY --from=build /usr/src/app/package.json /usr/src/app/pnpm-lock.yaml /usr/src/app/
 COPY --from=build /usr/src/app/build /usr/src/app/build
+# Copy the static folder so fonts and cursors are available in production
+COPY --from=build /usr/src/app/static /usr/src/app/static
 WORKDIR /usr/src/app
 RUN --mount=type=cache,id=pnpm,target=/pnpm/store pnpm install --prod --frozen-lockfile
 

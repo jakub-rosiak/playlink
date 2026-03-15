@@ -9,4 +9,3 @@ build
 Dockerfile
 .dockerignore
 package-lock.json
-pnpm-lock.yaml

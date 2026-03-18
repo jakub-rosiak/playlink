@@ -5,7 +5,6 @@ SvelteKit-based frontend for the Playlink project.
 ## Requirements
 
 - **Bun** (latest)
-- **Node.js 20.11.0 LTS** (optional, Bun is used as the primary runtime)
 
 ## Technologies Used
 
@@ -14,6 +13,9 @@ SvelteKit-based frontend for the Playlink project.
 - **Bun** (Runtime, Package Manager, Bundler)
 
 ## Getting Started
+
+> Use **Bun only** for dependency management and scripts in this project.
+> Do not use `npm`, `pnpm`, or `yarn`.
 
 ### 1. Installation
 
@@ -80,4 +82,3 @@ frontend/
   and **SvelteKit** for file-based routing, SSR, and adapter-based deployment.
 - To deploy, replace `@sveltejs/adapter-auto` with a platform-specific adapter
   (e.g. `adapter-node`, `adapter-vercel`, `adapter-netlify`).
-

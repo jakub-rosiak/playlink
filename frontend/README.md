@@ -4,14 +4,14 @@ SvelteKit-based frontend for the Playlink project.
 
 ## Requirements
 
-- **Node.js 20.11.0 LTS** (or later)
-- **npm**
+- **Bun** (latest)
+- **Node.js 20.11.0 LTS** (optional, Bun is used as the primary runtime)
 
 ## Technologies Used
 
 - **Svelte** `^5.51.0` (latest)
 - **SvelteKit** `^2.50.2`
-- **Vite** `^7.x`
+- **Bun** (Runtime, Package Manager, Bundler)
 
 ## Getting Started
 
@@ -21,18 +21,18 @@ Install dependencies:
 
 ```bash
 cd frontend
-npm install
+bun install
 ```
 
 ### 2. Running the Dev Server
 
-Start the development server with Hot Module Replacement (HMR):
+Start the development server:
 
 ```bash
-npm run dev
+bun dev
 
 # or open in browser automatically
-npm run dev -- --open
+bun dev -- --open
 ```
 
 The app will be available at `http://localhost:5173/`
@@ -40,7 +40,7 @@ The app will be available at `http://localhost:5173/`
 ### 3. Building for Production
 
 ```bash
-npm run build
+bun run build
 ```
 
 Output is placed under `.svelte-kit/output/`. For deployment, install an
@@ -49,7 +49,7 @@ Output is placed under `.svelte-kit/output/`. For deployment, install an
 ### 4. Previewing the Production Build
 
 ```bash
-npm run preview
+bun run preview
 ```
 
 ## Project Structure

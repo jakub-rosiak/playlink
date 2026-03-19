@@ -1,4 +1,5 @@
 import { writable } from "svelte/store";
+import { browser } from "$app/environment";
 
 function createRoomsStore() {
   const { subscribe, set } = writable([]);
@@ -32,7 +33,9 @@ function createRoomsStore() {
     reconnectTimeout = setTimeout(connect, 1000);
   }
 
-  connect();
+  if (browser) {
+    connect();
+  }
 
   return {
     subscribe,

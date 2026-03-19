@@ -6,12 +6,21 @@ function createRoomsStore() {
 
   let reconnectTimeout = null;
   let ws = null;
+  let reconnectAttempts = 0;
+  const baseReconnectDelayMs = 1000;
+  const maxReconnectDelayMs = 30000;
+  let isTornDown = false;
 
   function connect() {
+    if (isTornDown) {
+      return;
+    }
+
     ws = new WebSocket("ws://localhost:8000/ws/rooms"); // path tymczasowy, jak cos to sie zmieni
 
     ws.onopen = () => {
       console.log("WebSocket connected");
+      reconnectAttempts = 0;
     };
 
     ws.onmessage = (event) => {
@@ -42,8 +51,21 @@ function createRoomsStore() {
   }
 
   function reconnect() {
+    if (isTornDown) {
+      return;
+    }
+
     clearTimeout(reconnectTimeout);
-    reconnectTimeout = setTimeout(connect, 1000);
+
+    const expDelay = Math.min(
+      maxReconnectDelayMs,
+      baseReconnectDelayMs * Math.pow(2, reconnectAttempts)
+    );
+    const jitter = Math.random() * (expDelay * 0.5);
+    const delay = expDelay + jitter;
+
+    reconnectAttempts += 1;
+    reconnectTimeout = setTimeout(connect, delay);
   }
 
   if (browser) {
@@ -52,6 +74,17 @@ function createRoomsStore() {
 
   return {
     subscribe,
+    destroy() {
+      isTornDown = true;
+      clearTimeout(reconnectTimeout);
+      if (
+        ws &&
+        (ws.readyState === WebSocket.OPEN ||
+          ws.readyState === WebSocket.CONNECTING)
+      ) {
+        ws.close();
+      }
+    },
   };
 }
 

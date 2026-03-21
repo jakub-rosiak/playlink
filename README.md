@@ -25,7 +25,7 @@ docker compose up --build
 
 ### Backend (Python/FastAPI)
 
-Managed with `uv`. 
+Managed with `uv`.
 - **Location**: `/backend`
 - **Port**: 8000
 

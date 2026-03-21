@@ -1,31 +1,31 @@
 <script>
-    import "../lib/global.css";
+	import '../lib/global.css';
 
-    import favicon from "$lib/assets/favicon.svg";
+	import favicon from '$lib/assets/favicon.svg';
 
-    let { children } = $props();
+	let { children } = $props();
 </script>
 
 <svelte:head>
-    <link rel="icon" href={favicon} />
+	<link rel="icon" href={favicon} />
 </svelte:head>
 
 <nav>
-    <a href="/rooms">ROOMS</a>
-    <a href="/about">ABOUT</a>
-    <a href="/test">TEST</a>
+	<a href="/rooms">ROOMS</a>
+	<a href="/about">ABOUT</a>
+	<a href="/test">TEST</a>
 </nav>
 
 {@render children()}
 
 <style>
-    nav {
-        font-size: 2rem;
+	nav {
+		font-size: 2rem;
 
-        display: flex;
-        gap: 1rem;
+		display: flex;
+		gap: 1rem;
 
-        justify-content: center;
-        align-items: center;
-    }
+		justify-content: center;
+		align-items: center;
+	}
 </style>

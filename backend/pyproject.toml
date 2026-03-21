@@ -8,3 +8,24 @@ dependencies = [
     "fastapi[standard]==0.135.1",
     "uvicorn[standard]==0.41.0",
 ]
+
+[tool.ruff]
+# Target version (Python 3.12+ for 3.14+).
+target-version = "py312"
+line-length = 88
+
+[tool.ruff.lint]
+# Enable rules.
+select = ["E", "F", "I", "UP", "N", "B", "C4", "PT", "ARG", "PTH", "RET", "SIM", "TID"]
+ignore = []
+
+[tool.ruff.format]
+quote-style = "double"
+indent-style = "space"
+skip-magic-trailing-comma = false
+line-ending = "auto"
+
+[dependency-groups]
+dev = [
+    "ruff>=0.15.7",
+]

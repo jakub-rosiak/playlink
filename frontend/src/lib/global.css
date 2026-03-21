@@ -1,54 +1,73 @@
 @font-face {
-    font-family: 'Exocet';
-    src: url('/fonts/ExocetLight.ttf') format('truetype');
-    font-display: swap;
-    font-weight: normal;
-    font-style: normal;
+	font-family: 'Exocet';
+	src: url('/fonts/ExocetLight.ttf') format('truetype');
+	font-display: swap;
+	font-weight: normal;
+	font-style: normal;
 }
 
 @font-face {
-    font-family: 'Exocet';
-    src: url('/fonts/ExocetHeavy.ttf') format('truetype');
-    font-display: swap;
-    font-weight: bold;
-    font-style: normal;
+	font-family: 'Exocet';
+	src: url('/fonts/ExocetHeavy.ttf') format('truetype');
+	font-display: swap;
+	font-weight: bold;
+	font-style: normal;
 }
 
 :root {
-    --font-main: 'Exocet';
+	--font-main: 'Exocet';
 
-    --font-color: black;
-    --link-color: purple;
+	--font-color: black;
+	--link-color: purple;
 }
 
 body {
-    font-family: var(--font-main), sans-serif;
-    color: var(--font-color);
+	font-family: var(--font-main), sans-serif;
+	color: var(--font-color);
 }
 
 a {
-    color: var(--link-color);
-    text-decoration: none;
+	color: var(--link-color);
+	text-decoration: none;
 }
 
 /* --- KURSORY --- */
 
-html, body {
-    cursor: url('/cursor/normal.cur'), auto;
+html,
+body {
+	cursor: url('/cursor/normal.cur'), auto;
 }
 
-body.waiting, body.waiting * {
-    cursor: url('/cursor/busy.ani'), wait !important;
+body.waiting,
+body.waiting * {
+	cursor: url('/cursor/busy.ani'), wait !important;
 }
 
-.help, abbr, [title], a[href] {
-    cursor: url('/cursor/help.cur'), help;
+.help,
+abbr,
+[title],
+a[href] {
+	cursor: url('/cursor/help.cur'), help;
 }
 
-p, h1, h2, h3, h4, h5, h6, span, li, td, th, label {
-    cursor: url('/cursor/text.cur'), text;
+p,
+h1,
+h2,
+h3,
+h4,
+h5,
+h6,
+span,
+li,
+td,
+th,
+label {
+	cursor: url('/cursor/text.cur'), text;
 }
 
-input[type="text"], input[type="email"], input[type="password"], textarea {
-    cursor: url('/cursor/write.cur'), text;
+input[type='text'],
+input[type='email'],
+input[type='password'],
+textarea {
+	cursor: url('/cursor/write.cur'), text;
 }

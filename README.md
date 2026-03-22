@@ -40,6 +40,7 @@ docker compose up --build
 | Database | PostgreSQL 18 | Docker |
 | ORM | SQLModel | — |
 | Authentication | BIP39 Identity / ECDSA | ethers.js |
+| Git Hooks | prek | uv |
 
 ### Identity Authentication Flow
 
@@ -83,6 +84,11 @@ Execute the backend test suite:
 ```bash
 cd backend
 uv run pytest
+```
+
+Run all code quality hooks manually:
+```bash
+prek run --all-files
 ```
 
 ## Project Organization

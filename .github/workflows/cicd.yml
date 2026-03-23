@@ -12,7 +12,7 @@ jobs:
         steps:
             - uses: actions/checkout@v6
             - name: Install uv
-              uses: astral-sh/setup-uv@v5
+              uses: astral-sh/setup-uv@v7
               with:
                   version: "latest"
                   enable-cache: true
@@ -33,7 +33,7 @@ jobs:
         steps:
             - uses: actions/checkout@v6
             - name: Install uv
-              uses: astral-sh/setup-uv@v5
+              uses: astral-sh/setup-uv@v7
               with:
                   version: "latest"
                   enable-cache: true
@@ -81,7 +81,7 @@ jobs:
 
         steps:
             - name: Connect to Tailscale
-              uses: tailscale/github-action@v3
+              uses: tailscale/github-action@v4
               with:
                   authkey: ${{ secrets.TS_AUTHKEY }}
 

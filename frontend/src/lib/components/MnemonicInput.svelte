@@ -101,7 +101,7 @@
 </script>
 
 <div class="mnemonic-grid" onpaste={handlePaste} role="none">
-{#each words as word, i (i)}
+	{#each words as word, i (i)}
 		<div
 			class="word-slot"
 			class:focused={focusedIndex === i}

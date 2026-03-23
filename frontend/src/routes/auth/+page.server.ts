@@ -17,14 +17,20 @@ export const load: PageServerLoad = async ({ cookies }) => {
 	try {
 		const decoded = jwtDecode<SessionTokenClaims>(session);
 
+		if (!decoded?.sub || !decoded?.username) {
+			cookies.delete('session', { path: '/' });
+			return { user: null, jwt: null };
+		}
+
 		return {
 			user: {
-				address: decoded.sub ?? '',
-				username: decoded.username ?? ''
+				address: decoded.sub,
+				username: decoded.username
 			},
 			jwt: session
 		};
 	} catch {
+		cookies.delete('session', { path: '/' });
 		return { user: null, jwt: null };
 	}
 };

@@ -30,14 +30,6 @@
 		}
 	});
 
-	const availableGames = [
-		'Quake III Arena', 
-		'Diablo II', 
-		'StarCraft', 
-		'Half-Life', 
-		'Unreal Tournament'
-	];
-
 	async function measurePing() {
 		const start = performance.now();
 		try {
@@ -150,10 +142,14 @@
 
 					<div class="form-group">
 						<label for="game">Target Program (Game)</label>
-						<select id="game" name="game" required>
-							{#each availableGames as game}
-								<option value={game}>{game}</option>
-							{/each}
+									<select id="game" name="game" required disabled={!data.games.length}>
+										{#if data.games.length > 0}
+											{#each data.games as game}
+												<option value={game}>{game}</option>
+											{/each}
+										{:else}
+											<option value="" disabled selected>No games available</option>
+										{/if}
 						</select>
 					</div>
 

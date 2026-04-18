@@ -20,6 +20,12 @@ class Room(SQLModel, table=True):
     members: list["User"] = Relationship(back_populates="rooms", link_model=RoomMember)
 
 
+class Game(SQLModel, table=True):
+    id: int | None = Field(default=None, primary_key=True)
+    name: str = Field(index=True, unique=True)
+    sort_order: int = Field(index=True)
+
+
 class User(SQLModel, table=True):
     id: int | None = Field(default=None, primary_key=True)
     identity_address: str = Field(index=True, unique=True)

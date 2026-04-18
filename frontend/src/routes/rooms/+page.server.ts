@@ -9,9 +9,14 @@ interface SessionTokenClaims {
 	exp?: number;
 }
 
+function isStringArray(value: unknown): value is string[] {
+	return Array.isArray(value) && value.every((item) => typeof item === 'string');
+}
+
 export const load: PageServerLoad = async ({ cookies }) => {
 	const session = cookies.get('session');
 	let user = null;
+	let games: string[] = [];
 
 	if (session) {
 		try {
@@ -24,9 +29,24 @@ export const load: PageServerLoad = async ({ cookies }) => {
 		}
 	}
 
+	try {
+		const baseUrl = env.PUBLIC_BACKEND_URL || 'http://localhost:8000';
+		const response = await fetch(`${baseUrl}/games`);
+
+		if (response.ok) {
+			const data: unknown = await response.json();
+			if (isStringArray(data)) {
+				games = data;
+			}
+		}
+	} catch {
+		// If games cannot be loaded, keep an empty list so the page can still render.
+	}
+
 	return {
 		isAuthenticated: !!session,
-		user
+		user,
+		games
 	};
 };
 

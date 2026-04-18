@@ -19,7 +19,7 @@ from pydantic import BaseModel
 from sqlmodel import Session, select
 
 from database import get_session
-from models import Nonce, Room, User
+from models import Game, Nonce, Room, User
 
 # Load .env from project root if it exists
 env_path = Path(__file__).parent.parent / ".env"
@@ -118,7 +118,7 @@ async def get_current_user_address(
         return payload["sub"]
     except jwt.ExpiredSignatureError:
         raise HTTPException(status_code=401, detail="Token expired") from None
-    except jwt.InvalidTokenError, KeyError:
+    except (jwt.InvalidTokenError, KeyError):
         raise HTTPException(status_code=401, detail="Invalid token") from None
 
 
@@ -290,6 +290,12 @@ def list_rooms(session: SessionDep):
     return session.exec(select(Room)).all()
 
 
+@app.get("/games")
+def list_games(session: SessionDep):
+    games = session.exec(select(Game).order_by(Game.sort_order)).all()
+    return [game.name for game in games]
+
+
 @app.post("/rooms", status_code=201)
 async def create_room(
     body: CreateRoomRequest,
@@ -311,6 +317,10 @@ async def create_room(
     user_rooms_count = len(session.exec(select(Room).where(Room.created_by == address)).all())
     if user_rooms_count >= 3:
         raise HTTPException(status_code=400, detail="You can create a maximum of 3 rooms.")
+
+    valid_game = session.exec(select(Game).where(Game.name == body.game)).first()
+    if not valid_game:
+        raise HTTPException(status_code=400, detail="Unsupported game")
 
     room = Room(
         name=body.name,

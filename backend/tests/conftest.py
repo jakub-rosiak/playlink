@@ -4,6 +4,7 @@ from sqlmodel import Session, SQLModel, create_engine
 from sqlmodel.pool import StaticPool
 
 from main import app, get_session
+from models import Game
 
 
 @pytest.fixture(name="session")
@@ -13,6 +14,16 @@ def session_fixture():
     )
     SQLModel.metadata.create_all(engine)
     with Session(engine) as session:
+        session.add_all(
+            [
+                Game(name="Quake III Arena", sort_order=1),
+                Game(name="Diablo II", sort_order=2),
+                Game(name="StarCraft", sort_order=3),
+                Game(name="Half-Life", sort_order=4),
+                Game(name="Unreal Tournament", sort_order=5),
+            ]
+        )
+        session.commit()
         yield session
 
 

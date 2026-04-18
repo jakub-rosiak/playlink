@@ -1,8 +1,21 @@
 <script lang="ts">
 	import { roomsStore } from '$lib/roomsStore';
 	import { env } from '$env/dynamic/public';
+	import { enhance } from '$app/forms';
+	import type { ActionData, PageProps } from './$types';
+
+	let { data, form }: PageProps = $props();
 
 	let currentPing = $state<number | string>('...');
+	let isCreating = $state(false);
+
+	const availableGames = [
+		'Quake III Arena', 
+		'Diablo II', 
+		'StarCraft', 
+		'Half-Life', 
+		'Unreal Tournament'
+	];
 
 	async function measurePing() {
 		const start = performance.now();
@@ -37,6 +50,18 @@
 				nights without account walls. This concept focuses on instant browsing,
 				strong atmosphere, and a clear path to a later backend.
 			</p>
+
+			{#if data.isAuthenticated}
+				<div class="actions">
+					<button class="btn btn-primary" onclick={() => isCreating = !isCreating}>
+						{isCreating ? 'CANCEL' : 'CREATE ROOM'}
+					</button>
+				</div>
+			{:else}
+				<p class="description" style="color: #ff6b6b; font-size: 0.85rem;">
+					» Please sign in to create or join rooms.
+				</p>
+			{/if}
 		</div>
 
 		<div class="stats-grid">
@@ -60,7 +85,45 @@
 	</header>
 
 	<section class="board-section">
-		<div class="section-header">
+		{#if isCreating}
+			<div class="create-room-panel">
+				<h3 class="panel-title">CONFIGURE SIGNAL</h3>
+				
+				{#if form?.error}
+					<p class="error-msg">{form.error}</p>
+				{/if}
+
+				<form method="POST" action="?/create" use:enhance={() => {
+					return async ({ update }) => {
+						await update();
+						if (!form?.error) isCreating = false;
+					};
+				}}>
+					<div class="form-group">
+						<label for="name">Identifier (Lobby Name)</label>
+						<input type="text" id="name" name="name" required placeholder="e.g. My Retro Match" />
+					</div>
+
+					<div class="form-group">
+						<label for="game">Target Program (Game)</label>
+						<select id="game" name="game" required>
+							{#each availableGames as game}
+								<option value={game}>{game}</option>
+							{/each}
+						</select>
+					</div>
+
+					<div class="form-group">
+						<label for="players_max">Max Connections (Slots)</label>
+						<input type="number" id="players_max" name="players_max" min="2" max="64" value="4" required />
+					</div>
+
+					<button type="submit" class="btn btn-primary" style="margin-top: 1rem;">BROADCAST</button>
+				</form>
+			</div>
+		{/if}
+
+		<div class="section-header" style={isCreating ? 'margin-top: 3rem;' : ''}>
 			<h2 class="section-title">— ACTIVE ROOMS</h2>
 		</div>
 
@@ -82,6 +145,24 @@
 							<div class="progress-bar">
 								<div class="progress-fill" style="width: {(room.players_active / room.players_max) * 100}%"></div>
 							</div>
+							
+							{#if data.isAuthenticated}
+								<div class="card-actions">
+									<form method="POST" action="?/join" use:enhance>
+										<input type="hidden" name="room_name" value={room.name} />
+										<button type="submit" class="card-btn join" disabled={room.players_active >= room.players_max}>
+											[ JOIN ]
+										</button>
+									</form>
+									
+									<form method="POST" action="?/leave" use:enhance>
+										<input type="hidden" name="room_name" value={room.name} />
+										<button type="submit" class="card-btn leave" disabled={room.players_active === 0}>
+											[ LEAVE ]
+										</button>
+									</form>
+								</div>
+							{/if}
 						</div>
 					</div>
 				{/each}
@@ -341,6 +422,105 @@
 		background: #c29d59;
 		height: 100%;
 		transition: width 0.3s ease;
+	}
+
+	.create-room-panel {
+		background: #0a0a0b;
+		border: 1px solid #28251e;
+		border-radius: 8px;
+		padding: 2rem;
+		margin-bottom: 2rem;
+	}
+
+	.panel-title {
+		font-family: 'Exocet', serif;
+		color: #e3bc74;
+		margin: 0 0 1.5rem 0;
+		font-weight: normal;
+	}
+
+	.form-group {
+		margin-bottom: 1.5rem;
+	}
+
+	.form-group label {
+		display: block;
+		font-family: ui-monospace, monospace;
+		font-size: 0.75rem;
+		color: #8c877a;
+		margin-bottom: 0.5rem;
+		letter-spacing: 0.1em;
+		text-transform: uppercase;
+	}
+
+	.form-group input, .form-group select {
+		width: 100%;
+		background: #141415;
+		border: 1px solid #28251e;
+		color: #e4d8b8;
+		padding: 0.8rem;
+		border-radius: 4px;
+		font-family: ui-monospace, monospace;
+		font-size: 0.9rem;
+	}
+
+	.form-group input:focus, .form-group select:focus {
+		outline: none;
+		border-color: #e3bc74;
+	}
+
+	.error-msg {
+		color: #ff6b6b;
+		font-family: ui-monospace, monospace;
+		font-size: 0.8rem;
+		margin-bottom: 1.5rem;
+		padding: 0.8rem;
+		border: 1px solid #ff6b6b;
+		background: rgba(255, 107, 107, 0.1);
+		border-radius: 4px;
+	}
+
+	.card-actions {
+		display: flex;
+		gap: 0.5rem;
+		margin-top: 1rem;
+	}
+
+	.card-actions form {
+		flex: 1;
+	}
+
+	.card-btn {
+		width: 100%;
+		background: transparent;
+		border: 1px solid #28251e;
+		color: #8c877a;
+		padding: 0.5rem;
+		font-family: ui-monospace, monospace;
+		font-size: 0.7rem;
+		cursor: pointer;
+		border-radius: 4px;
+		transition: all 0.2s;
+	}
+
+	.card-btn:hover:not(:disabled) {
+		border-color: #e3bc74;
+		color: #e3bc74;
+	}
+
+	.card-btn.join:hover:not(:disabled) {
+		border-color: #4CAF50;
+		color: #4CAF50;
+	}
+
+	.card-btn.leave:hover:not(:disabled) {
+		border-color: #ff6b6b;
+		color: #ff6b6b;
+	}
+
+	.card-btn:disabled {
+		opacity: 0.3;
+		cursor: not-allowed;
 	}
 </style>
 

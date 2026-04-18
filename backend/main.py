@@ -303,6 +303,42 @@ async def create_room(
     return room
 
 
+@app.post("/rooms/{room_name}/join", status_code=200)
+async def join_room(
+    room_name: str,
+    session: SessionDep,
+    address: Annotated[str, Depends(get_current_user_address)],
+):
+    room = session.exec(select(Room).where(Room.name == room_name)).first()
+    if not room:
+        raise HTTPException(status_code=404, detail="Room not found")
+    if room.players_active >= room.players_max:
+        raise HTTPException(status_code=400, detail="Room is full")
+    
+    room.players_active += 1
+    session.add(room)
+    session.commit()
+    
+    await manager.broadcast(get_rooms_payload(session))
+    return {"status": "joined", "room": room.name}
+
+@app.post("/rooms/{room_name}/leave", status_code=200)
+async def leave_room(
+    room_name: str,
+    session: SessionDep,
+    address: Annotated[str, Depends(get_current_user_address)],
+):
+    room = session.exec(select(Room).where(Room.name == room_name)).first()
+    if not room:
+        raise HTTPException(status_code=404, detail="Room not found")
+    if room.players_active > 0:
+        room.players_active -= 1
+        session.add(room)
+        session.commit()
+    
+    await manager.broadcast(get_rooms_payload(session))
+    return {"status": "left", "room": room.name}
+
 @app.websocket("/ws/rooms")
 async def websocket_rooms(websocket: WebSocket, session: SessionDep):
     await manager.connect(websocket)

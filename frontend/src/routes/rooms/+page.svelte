@@ -1,5 +1,26 @@
 <script lang="ts">
 	import { roomsStore } from '$lib/roomsStore';
+	import { env } from '$env/dynamic/public';
+
+	let currentPing = $state<number | string>('...');
+
+	async function measurePing() {
+		const start = performance.now();
+		try {
+			const baseUrl = env.PUBLIC_BACKEND_URL || 'http://localhost:8000';
+			await fetch(`${baseUrl}/`);
+			const end = performance.now();
+			currentPing = Math.round(end - start);
+		} catch (e) {
+			currentPing = 'ERR';
+		}
+	}
+
+	$effect(() => {
+		measurePing();
+		const interval = setInterval(measurePing, 15000);
+		return () => clearInterval(interval);
+	});
 </script>
 
 <svelte:head>
@@ -16,22 +37,23 @@
 				nights without account walls. This concept focuses on instant browsing,
 				strong atmosphere, and a clear path to a later backend.
 			</p>
-			
-			<div class="actions">
-				<button class="btn btn-primary">BROWSE SIGNALS</button>
-				<button class="btn btn-secondary">STAGE A MOCK SIGNAL</button>
-			</div>
 		</div>
 
 		<div class="stats-grid">
 			<div class="stat-card">
-				<h3 class="stat-title">OPEN SIGNALS</h3>
+				<h3 class="stat-title">OPEN ROOMS</h3>
 				<div class="stat-value">{$roomsStore.length}</div>
 				<p class="stat-desc">Lobbies currently broadcasting</p>
 			</div>
 			<div class="stat-card">
 				<h3 class="stat-title">AVERAGE PING</h3>
-				<div class="stat-value">71 MS</div>
+				<div class="stat-value">
+					{#if typeof currentPing === 'number'}
+						{currentPing} MS
+					{:else}
+						{currentPing}
+					{/if}
+				</div>
 				<p class="stat-desc">Healthy enough for browse mode</p>
 			</div>
 		</div>
@@ -39,7 +61,7 @@
 
 	<section class="board-section">
 		<div class="section-header">
-			<h2 class="section-title">— ACTIVE SIGNALS</h2>
+			<h2 class="section-title">— ACTIVE ROOMS</h2>
 		</div>
 
 		{#if $roomsStore.length === 0}

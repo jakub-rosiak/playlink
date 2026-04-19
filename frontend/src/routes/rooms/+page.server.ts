@@ -128,10 +128,13 @@ export const actions: Actions = {
 
 		try {
 			const baseUrl = env.PUBLIC_BACKEND_URL || 'http://localhost:8000';
-			const res = await fetch(`${baseUrl}/rooms/${encodeURIComponent(room_name.toString())}/leave`, {
-				method: 'POST',
-				headers: { Authorization: `Bearer ${session}` }
-			});
+			const res = await fetch(
+				`${baseUrl}/rooms/${encodeURIComponent(room_name.toString())}/leave`,
+				{
+					method: 'POST',
+					headers: { Authorization: `Bearer ${session}` }
+				}
+			);
 
 			if (!res.ok) {
 				const result = await res.json();

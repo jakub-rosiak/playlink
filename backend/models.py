@@ -21,7 +21,7 @@ class Room(SQLModel, table=True):
         default_factory=lambda: datetime.now(UTC) + timedelta(minutes=1)
     )
 
-    members: list["User"] = Relationship(back_populates="rooms", link_model=RoomMember)
+    members: list[User] = Relationship(back_populates="rooms", link_model=RoomMember)
 
 
 class Game(SQLModel, table=True):
@@ -41,8 +41,8 @@ class User(SQLModel, table=True):
     created_at: datetime = Field(default_factory=lambda: datetime.now(UTC))
     last_login: datetime | None = Field(default=None)
 
-    nonces: list["Nonce"] = Relationship(back_populates="user")
-    rooms: list["Room"] = Relationship(back_populates="members", link_model=RoomMember)
+    nonces: list[Nonce] = Relationship(back_populates="user")
+    rooms: list[Room] = Relationship(back_populates="members", link_model=RoomMember)
 
 
 class Nonce(SQLModel, table=True):

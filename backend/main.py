@@ -80,7 +80,7 @@ def hash_nonce(nonce_value: str) -> str:
 
 def get_rooms_payload(session: Session) -> str:
     now = datetime.now(UTC)
-    
+
     # Optional cleanup of expired rooms before returning the payload
     expired_rooms = session.exec(select(Room).where(Room.expires_at <= now)).all()
     for er in expired_rooms:
@@ -122,7 +122,7 @@ async def get_current_user_address(
         return payload["sub"]
     except jwt.ExpiredSignatureError:
         raise HTTPException(status_code=401, detail="Token expired") from None
-    except (jwt.InvalidTokenError, KeyError):
+    except jwt.InvalidTokenError, KeyError:
         raise HTTPException(status_code=401, detail="Invalid token") from None
 
 
@@ -307,7 +307,7 @@ async def create_room(
     address: Annotated[str, Depends(get_current_user_address)],
 ):
     now = datetime.now(UTC)
-    
+
     # Clean up expired rooms for accurate counts
     expired_rooms = session.exec(select(Room).where(Room.expires_at <= now)).all()
     for er in expired_rooms:
@@ -336,7 +336,7 @@ async def create_room(
         players_max=body.players_max,
         created_by=address,
     )
-    
+
     # Auto-join creator
     user = session.exec(select(User).where(User.identity_address == address)).first()
     if user:
@@ -359,23 +359,24 @@ async def join_room(
     room = session.exec(select(Room).where(Room.name == room_name)).first()
     if not room:
         raise HTTPException(status_code=404, detail="Room not found")
-        
+
     user = session.exec(select(User).where(User.identity_address == address)).first()
     if not user:
         raise HTTPException(status_code=404, detail="User not found")
-        
+
     if user in room.members:
         raise HTTPException(status_code=400, detail="You are already in this room")
-        
+
     if len(room.members) >= room.players_max:
         raise HTTPException(status_code=400, detail="Room is full")
-    
+
     room.members.append(user)
     session.add(room)
     session.commit()
-    
+
     await manager.broadcast(get_rooms_payload(session))
     return {"status": "joined", "room": room.name}
+
 
 @app.post("/rooms/{room_name}/leave", status_code=200)
 async def leave_room(
@@ -386,20 +387,21 @@ async def leave_room(
     room = session.exec(select(Room).where(Room.name == room_name)).first()
     if not room:
         raise HTTPException(status_code=404, detail="Room not found")
-        
+
     user = session.exec(select(User).where(User.identity_address == address)).first()
     if not user:
         raise HTTPException(status_code=404, detail="User not found")
 
     if user not in room.members:
         raise HTTPException(status_code=400, detail="You are not in this room")
-        
+
     room.members.remove(user)
     session.add(room)
     session.commit()
-    
+
     await manager.broadcast(get_rooms_payload(session))
     return {"status": "left", "room": room.name}
+
 
 @app.websocket("/ws/rooms")
 async def websocket_rooms(websocket: WebSocket, session: SessionDep):

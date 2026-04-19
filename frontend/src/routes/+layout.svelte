@@ -21,7 +21,12 @@
 
 <style>
 	:global(body) {
-		font-family: 'Inter', ui-sans-serif, system-ui, -apple-system, sans-serif;
+		font-family:
+			'Inter',
+			ui-sans-serif,
+			system-ui,
+			-apple-system,
+			sans-serif;
 	}
 
 	nav {

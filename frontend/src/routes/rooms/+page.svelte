@@ -57,13 +57,13 @@
 		return () => clearInterval(interval);
 	});
 
-	let activeRooms = $derived($roomsStore.filter(r => new Date(r.expires_at) > currentTime));
+	let activeRooms = $derived($roomsStore.filter((r) => new Date(r.expires_at) > currentTime));
 
 	function getRemainingTime(expiresAtIso: string): string {
 		const expiry = new Date(expiresAtIso).getTime();
 		const diff = expiry - currentTime.getTime();
 		if (diff <= 0) return '00:00';
-		
+
 		const minutes = Math.floor(diff / 60000);
 		const seconds = Math.floor((diff % 60000) / 1000);
 		return `${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
@@ -80,8 +80,9 @@
 			<div class="logo-section">
 				<h1 class="logo">PLAYLINK</h1>
 				<p class="description">
-					Find players for forgotten servers, overhaul mods, and retro netplay nights without account walls.
-					This concept focuses on instant browsing, strong atmosphere, and a clear path to a later backend.
+					Find players for forgotten servers, overhaul mods, and retro netplay nights without
+					account walls. This concept focuses on instant browsing, strong atmosphere, and a clear
+					path to a later backend.
 				</p>
 
 				{#if data.isAuthenticated}
@@ -156,10 +157,20 @@
 
 						<div class="form-group">
 							<label for="players_max">Max Connections (Slots)</label>
-							<input type="number" id="players_max" name="players_max" min="2" max="64" value="4" required />
+							<input
+								type="number"
+								id="players_max"
+								name="players_max"
+								min="2"
+								max="64"
+								value="4"
+								required
+							/>
 						</div>
 
-						<button type="submit" class="btn btn-primary" style="margin-top: 1rem;">BROADCAST</button>
+						<button type="submit" class="btn btn-primary" style="margin-top: 1rem;"
+							>BROADCAST</button
+						>
 					</form>
 				</div>
 			{/if}
@@ -252,7 +263,9 @@
 		z-index: 100;
 		background: #0d0d0d;
 		border: 1px solid #332f26;
-		box-shadow: 0 10px 30px rgba(0,0,0,0.8), inset 0 0 15px rgba(0,0,0,0.5);
+		box-shadow:
+			0 10px 30px rgba(0, 0, 0, 0.8),
+			inset 0 0 15px rgba(0, 0, 0, 0.5);
 		padding: 1rem 1.5rem;
 		display: flex;
 		align-items: center;
@@ -339,7 +352,12 @@
 	.rooms-page-container {
 		background-color: #0d0d0d;
 		color: #e4d8b8;
-		font-family: 'Inter', ui-sans-serif, system-ui, -apple-system, sans-serif;
+		font-family:
+			'Inter',
+			ui-sans-serif,
+			system-ui,
+			-apple-system,
+			sans-serif;
 		min-height: 100vh;
 		padding: 2rem 0;
 	}
@@ -351,7 +369,9 @@
 		background: #111111;
 		border: 1px solid #23201a;
 		border-radius: 12px;
-		box-shadow: inset 0 0 40px rgba(0,0,0,0.5), 0 10px 40px rgba(0,0,0,0.8);
+		box-shadow:
+			inset 0 0 40px rgba(0, 0, 0, 0.5),
+			0 10px 40px rgba(0, 0, 0, 0.8);
 	}
 
 	.top-bar {
@@ -534,7 +554,7 @@
 
 	.signal-card:hover {
 		border-color: #585141;
-		box-shadow: 0 4px 20px rgba(0,0,0,0.5);
+		box-shadow: 0 4px 20px rgba(0, 0, 0, 0.5);
 	}
 
 	.signal-header {
@@ -674,8 +694,8 @@
 	}
 
 	.card-btn.join:hover:not(:disabled) {
-		border-color: #4CAF50;
-		color: #4CAF50;
+		border-color: #4caf50;
+		color: #4caf50;
 	}
 
 	.card-btn.leave:hover:not(:disabled) {

@@ -20,13 +20,32 @@
 {@render children()}
 
 <style>
+	:global(body) {
+		font-family:
+			'Inter',
+			ui-sans-serif,
+			system-ui,
+			-apple-system,
+			sans-serif;
+	}
+
 	nav {
-		font-size: 2rem;
-
+		font-size: 2.5rem;
 		display: flex;
-		gap: 1rem;
-
+		gap: 2rem;
+		padding: 1rem;
 		justify-content: center;
 		align-items: center;
+	}
+
+	nav a {
+		color: white;
+		text-decoration: none;
+		font-family: 'Exocet', serif;
+		transition: color 0.2s;
+	}
+
+	nav a:hover {
+		color: #e3bc74;
 	}
 </style>

@@ -19,7 +19,7 @@ from pydantic import BaseModel
 from sqlmodel import Session, select
 
 from database import get_session
-from models import Nonce, Room, User
+from models import Game, Nonce, Room, User
 
 # Load .env from project root if it exists
 env_path = Path(__file__).parent.parent / ".env"
@@ -79,12 +79,28 @@ def hash_nonce(nonce_value: str) -> str:
 
 
 def get_rooms_payload(session: Session) -> str:
+    now = datetime.now(UTC)
+
+    # Optional cleanup of expired rooms before returning the payload
+    expired_rooms = session.exec(select(Room).where(Room.expires_at <= now)).all()
+    for er in expired_rooms:
+        session.delete(er)
+    if expired_rooms:
+        session.commit()
+
     return json.dumps(
         [
             {
                 "name": r.name,
-                "players_active": r.players_active,
+                "game": r.game,
+                "players_active": len(r.members),
                 "players_max": r.players_max,
+                "member_addresses": [m.identity_address for m in r.members],
+                "expires_at": (
+                    r.expires_at.isoformat() + "Z"
+                    if r.expires_at.tzinfo is None
+                    else r.expires_at.isoformat()
+                ),
             }
             for r in session.exec(select(Room)).all()
         ]
@@ -278,15 +294,41 @@ def list_rooms(session: SessionDep):
     return session.exec(select(Room)).all()
 
 
+@app.get("/games")
+def list_games(session: SessionDep):
+    games = session.exec(select(Game).order_by(Game.sort_order)).all()
+    return [game.name for game in games]
+
+
 @app.post("/rooms", status_code=201)
 async def create_room(
     body: CreateRoomRequest,
     session: SessionDep,
     address: Annotated[str, Depends(get_current_user_address)],
 ):
+    now = datetime.now(UTC)
+
+    # Clean up expired rooms for accurate counts
+    expired_rooms = session.exec(select(Room).where(Room.expires_at <= now)).all()
+    for er in expired_rooms:
+        session.delete(er)
+    session.commit()
+
     existing = session.exec(select(Room).where(Room.name == body.name)).first()
     if existing:
         raise HTTPException(status_code=409, detail="Room name already taken")
+
+    user_rooms_count = len(
+        session.exec(select(Room).where(Room.created_by == address)).all()
+    )
+    if user_rooms_count >= 3:
+        raise HTTPException(
+            status_code=400, detail="You can create a maximum of 3 rooms."
+        )
+
+    valid_game = session.exec(select(Game).where(Game.name == body.game)).first()
+    if not valid_game:
+        raise HTTPException(status_code=400, detail="Unsupported game")
 
     room = Room(
         name=body.name,
@@ -294,12 +336,71 @@ async def create_room(
         players_max=body.players_max,
         created_by=address,
     )
+
+    # Auto-join creator
+    user = session.exec(select(User).where(User.identity_address == address)).first()
+    if user:
+        room.members.append(user)
+
     session.add(room)
     session.commit()
     session.refresh(room)
 
     await manager.broadcast(get_rooms_payload(session))
-    return room
+    return {"status": "created", "room": room.name}
+
+
+@app.post("/rooms/{room_name}/join", status_code=200)
+async def join_room(
+    room_name: str,
+    session: SessionDep,
+    address: Annotated[str, Depends(get_current_user_address)],
+):
+    room = session.exec(select(Room).where(Room.name == room_name)).first()
+    if not room:
+        raise HTTPException(status_code=404, detail="Room not found")
+
+    user = session.exec(select(User).where(User.identity_address == address)).first()
+    if not user:
+        raise HTTPException(status_code=404, detail="User not found")
+
+    if user in room.members:
+        raise HTTPException(status_code=400, detail="You are already in this room")
+
+    if len(room.members) >= room.players_max:
+        raise HTTPException(status_code=400, detail="Room is full")
+
+    room.members.append(user)
+    session.add(room)
+    session.commit()
+
+    await manager.broadcast(get_rooms_payload(session))
+    return {"status": "joined", "room": room.name}
+
+
+@app.post("/rooms/{room_name}/leave", status_code=200)
+async def leave_room(
+    room_name: str,
+    session: SessionDep,
+    address: Annotated[str, Depends(get_current_user_address)],
+):
+    room = session.exec(select(Room).where(Room.name == room_name)).first()
+    if not room:
+        raise HTTPException(status_code=404, detail="Room not found")
+
+    user = session.exec(select(User).where(User.identity_address == address)).first()
+    if not user:
+        raise HTTPException(status_code=404, detail="User not found")
+
+    if user not in room.members:
+        raise HTTPException(status_code=400, detail="You are not in this room")
+
+    room.members.remove(user)
+    session.add(room)
+    session.commit()
+
+    await manager.broadcast(get_rooms_payload(session))
+    return {"status": "left", "room": room.name}
 
 
 @app.websocket("/ws/rooms")

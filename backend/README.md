@@ -1,4 +1,4 @@
-, # Playlink Backend (FastAPI)
+# Playlink Backend (FastAPI)
 
 FastAPI application handling identity authentication, room management, and realtime room-list broadcasting over WebSockets.
 

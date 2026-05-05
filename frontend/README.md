@@ -31,10 +31,10 @@ bun install
 
 Copy `frontend/.env.example` to `frontend/.env`. The public variables exposed via `$env/dynamic/public`:
 
-| Variable             | Purpose                                            | Example                  |
-| -------------------- | -------------------------------------------------- | ------------------------ |
-| `PUBLIC_BACKEND_URL` | Base URL of the FastAPI backend (HTTP).            | `http://localhost:8000`  |
-| `PUBLIC_WS_URL`      | Base URL for the rooms WebSocket (`ws://`/`wss://`). | `ws://localhost:8000`  |
+| Variable             | Purpose                                              | Example                 |
+| -------------------- | ---------------------------------------------------- | ----------------------- |
+| `PUBLIC_BACKEND_URL` | Base URL of the FastAPI backend (HTTP).              | `http://localhost:8000` |
+| `PUBLIC_WS_URL`      | Base URL for the rooms WebSocket (`ws://`/`wss://`). | `ws://localhost:8000`   |
 
 ### 3. Running the Dev Server
 

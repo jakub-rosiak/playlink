@@ -60,7 +60,8 @@ We use a simplified version of Conventional Commits to keep our history readable
 
 ---
 ## 🛠 Quality Control
--   **Backend:** Use `uv run pytest` for testing.
+-   **Backend:** `uv run pytest` for the test suite. After changing any SQLModel schema, generate a migration with `uv run alembic revision --autogenerate -m "..."` and commit it alongside the model change.
+-   **Frontend:** `bun run check` (svelte-check + TypeScript), `bun run lint` (ESLint), `bun run format` (Prettier).
 -   **Linting & Formatting:** Handled by [`prek`](https://github.com/drmorr0/prek) — a pre-commit hook runner that executes `ruff check --fix` and `ruff format` automatically on staged files before each commit. To run all hooks manually across the entire codebase (including ESLint and Prettier for the frontend):
 ```bash
 prek run --all-files

@@ -1,7 +1,16 @@
 import type { Actions, PageServerLoad } from './$types';
 import { env } from '$env/dynamic/public';
+import { env as privateEnv } from '$env/dynamic/private';
 import { fail } from '@sveltejs/kit';
 import { jwtDecode } from 'jwt-decode';
+
+function backendBase(): string {
+	return (
+		privateEnv.BACKEND_INTERNAL_URL ||
+		env.PUBLIC_BACKEND_URL ||
+		'http://localhost:8000'
+	);
+}
 
 interface SessionTokenClaims {
 	sub?: string;
@@ -30,7 +39,7 @@ export const load: PageServerLoad = async ({ cookies }) => {
 	}
 
 	try {
-		const baseUrl = env.PUBLIC_BACKEND_URL || 'http://localhost:8000';
+		const baseUrl = backendBase();
 		const response = await fetch(`${baseUrl}/games`);
 
 		if (response.ok) {
@@ -67,7 +76,7 @@ export const actions: Actions = {
 		console.log('creating room', name, game, players_max);
 
 		try {
-			const baseUrl = env.PUBLIC_BACKEND_URL || 'http://localhost:8000';
+			const baseUrl = backendBase();
 			const res = await fetch(`${baseUrl}/rooms`, {
 				method: 'POST',
 				headers: {
@@ -101,7 +110,7 @@ export const actions: Actions = {
 		if (!room_name) return fail(400, { error: 'Missing room name' });
 
 		try {
-			const baseUrl = env.PUBLIC_BACKEND_URL || 'http://localhost:8000';
+			const baseUrl = backendBase();
 			const res = await fetch(`${baseUrl}/rooms/${encodeURIComponent(room_name.toString())}/join`, {
 				method: 'POST',
 				headers: { Authorization: `Bearer ${session}` }
@@ -127,7 +136,7 @@ export const actions: Actions = {
 		if (!room_name) return fail(400, { error: 'Missing room name' });
 
 		try {
-			const baseUrl = env.PUBLIC_BACKEND_URL || 'http://localhost:8000';
+			const baseUrl = backendBase();
 			const res = await fetch(
 				`${baseUrl}/rooms/${encodeURIComponent(room_name.toString())}/leave`,
 				{

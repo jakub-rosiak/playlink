@@ -224,6 +224,12 @@
 												[ LEAVE ]
 											</button>
 										</form>
+
+										{#if isMember}
+											<a class="card-btn open" href="/rooms/{encodeURIComponent(room.name)}">
+												[ OPEN ]
+											</a>
+										{/if}
 									</div>
 								{/if}
 							</div>
@@ -701,6 +707,20 @@
 	.card-btn.leave:hover:not(:disabled) {
 		border-color: #ff6b6b;
 		color: #ff6b6b;
+	}
+
+	.card-btn.open {
+		display: flex;
+		align-items: center;
+		justify-content: center;
+		text-decoration: none;
+		color: #e3bc74;
+		border-color: #3d3930;
+	}
+
+	.card-btn.open:hover {
+		border-color: #e3bc74;
+		background: rgba(227, 188, 116, 0.08);
 	}
 
 	.card-btn:disabled {

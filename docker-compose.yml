@@ -3,10 +3,11 @@ services:
     image: postgres:18-alpine
     env_file:
       - .env
-    ports:
-      - "5432:5432"
+    # No host-port mapping: DB is only reachable on the docker network.
+    # Docker's iptables rules bypass UFW, so any `ports:` entry here would
+    # expose Postgres to the public internet regardless of host firewall.
     volumes:
-      - postgres_data:/var/lib/postgresql/data
+      - postgres_data:/var/lib/postgresql
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}"]
       interval: 10s
@@ -49,6 +50,10 @@ services:
       - "3000:3000"
     env_file:
       - frontend/.env
+    environment:
+      # Used by SvelteKit server-side `load`/actions for in-cluster calls.
+      # Browser code keeps using PUBLIC_BACKEND_URL / PUBLIC_WS_URL.
+      BACKEND_INTERNAL_URL: http://backend:8000
     depends_on:
       backend:
         condition: service_healthy

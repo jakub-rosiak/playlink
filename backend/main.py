@@ -19,7 +19,7 @@ from pydantic import BaseModel
 from sqlmodel import Session, select
 
 from database import get_session
-from models import Game, Nonce, Room, User
+from models import Game, Message, Nonce, Room, User
 
 # Load .env from project root if it exists
 env_path = Path(__file__).parent.parent / ".env"
@@ -73,6 +73,28 @@ class ConnectionManager:
 manager = ConnectionManager()
 
 
+class RoomChatManager:
+    def __init__(self):
+        self.rooms: dict[str, list[WebSocket]] = {}
+
+    async def connect(self, room: str, websocket: WebSocket):
+        await websocket.accept()
+        self.rooms.setdefault(room, []).append(websocket)
+
+    def disconnect(self, room: str, websocket: WebSocket):
+        if room in self.rooms and websocket in self.rooms[room]:
+            self.rooms[room].remove(websocket)
+            if not self.rooms[room]:
+                del self.rooms[room]
+
+    async def broadcast(self, room: str, payload: str):
+        for connection in list(self.rooms.get(room, [])):
+            await connection.send_text(payload)
+
+
+chat_manager = RoomChatManager()
+
+
 # --- Helpers ---
 def hash_nonce(nonce_value: str) -> str:
     return hashlib.sha256(nonce_value.encode()).hexdigest()
@@ -84,6 +106,11 @@ def get_rooms_payload(session: Session) -> str:
     # Optional cleanup of expired rooms before returning the payload
     expired_rooms = session.exec(select(Room).where(Room.expires_at <= now)).all()
     for er in expired_rooms:
+        old_messages = session.exec(
+            select(Message).where(Message.room_id == er.id)
+        ).all()
+        for m in old_messages:
+            session.delete(m)
         session.delete(er)
     if expired_rooms:
         session.commit()
@@ -112,22 +139,60 @@ SessionDep = Annotated[Session, Depends(get_session)]
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="auth/verify", auto_error=False)
 
 
+def _decode_jwt(token: str) -> str:
+    """Decode a JWT and return its `sub` claim. Raises on any failure."""
+    payload = jwt.decode(token, JWT_SECRET, algorithms=[JWT_ALGORITHM])
+    address = payload.get("sub")
+    if not isinstance(address, str):
+        raise jwt.InvalidTokenError("Missing sub claim")
+    return address
+
+
 async def get_current_user_address(
     token: Annotated[str | None, Depends(oauth2_scheme)],
 ) -> str:
     if not token:
         raise HTTPException(status_code=401, detail="Not authenticated")
     try:
-        payload = jwt.decode(token, JWT_SECRET, algorithms=[JWT_ALGORITHM])
-        return payload["sub"]
+        return _decode_jwt(token)
     except jwt.ExpiredSignatureError:
         raise HTTPException(status_code=401, detail="Token expired") from None
-    except jwt.InvalidTokenError, KeyError:
+    except (jwt.InvalidTokenError, KeyError):
         raise HTTPException(status_code=401, detail="Invalid token") from None
+
+
+DEFAULT_GAMES: list[str] = [
+    "Quake III Arena",
+    "Diablo II",
+    "StarCraft",
+    "Half-Life",
+    "Unreal Tournament",
+]
+
+
+def seed_default_games() -> None:
+    """Idempotent: insert any DEFAULT_GAMES rows that don't exist yet."""
+    from database import engine
+
+    with Session(engine) as session:
+        existing = {g.name for g in session.exec(select(Game)).all()}
+        next_order = 1 + max(
+            (g.sort_order for g in session.exec(select(Game)).all()), default=0
+        )
+        added = False
+        for name in DEFAULT_GAMES:
+            if name in existing:
+                continue
+            session.add(Game(name=name, sort_order=next_order))
+            next_order += 1
+            added = True
+        if added:
+            session.commit()
 
 
 @asynccontextmanager
 async def lifespan(_app: FastAPI):
+    seed_default_games()
     yield
 
 
@@ -294,6 +359,25 @@ def list_rooms(session: SessionDep):
     return session.exec(select(Room)).all()
 
 
+@app.get("/rooms/{room_name}")
+def get_room(room_name: str, session: SessionDep):
+    room = session.exec(select(Room).where(Room.name == room_name)).first()
+    if not room:
+        raise HTTPException(status_code=404, detail="Room not found")
+    return {
+        "name": room.name,
+        "game": room.game,
+        "players_max": room.players_max,
+        "players_active": len(room.members),
+        "member_addresses": [m.identity_address for m in room.members],
+        "expires_at": (
+            room.expires_at.isoformat() + "Z"
+            if room.expires_at.tzinfo is None
+            else room.expires_at.isoformat()
+        ),
+    }
+
+
 @app.get("/games")
 def list_games(session: SessionDep):
     games = session.exec(select(Game).order_by(Game.sort_order)).all()
@@ -311,6 +395,11 @@ async def create_room(
     # Clean up expired rooms for accurate counts
     expired_rooms = session.exec(select(Room).where(Room.expires_at <= now)).all()
     for er in expired_rooms:
+        old_messages = session.exec(
+            select(Message).where(Message.room_id == er.id)
+        ).all()
+        for m in old_messages:
+            session.delete(m)
         session.delete(er)
     session.commit()
 
@@ -412,3 +501,103 @@ async def websocket_rooms(websocket: WebSocket, session: SessionDep):
             await websocket.receive_text()
     except WebSocketDisconnect:
         manager.disconnect(websocket)
+
+
+def _msg_dict(msg: Message, sender_username: str) -> dict:
+    created = msg.created_at
+    iso = created.isoformat() + "Z" if created.tzinfo is None else created.isoformat()
+    return {
+        "id": msg.id,
+        "sender_address": msg.sender_address,
+        "sender_username": sender_username,
+        "content": msg.content,
+        "created_at": iso,
+    }
+
+
+@app.websocket("/ws/rooms/{room_name}/chat")
+async def websocket_chat(
+    websocket: WebSocket,
+    room_name: str,
+    token: str,
+    session: SessionDep,
+):
+    # 1. Authenticate via JWT in query param (browsers can't set WS headers).
+    try:
+        address = _decode_jwt(token)
+    except Exception:
+        await websocket.close(code=4401)
+        return
+
+    # 2. Room must exist.
+    room = session.exec(select(Room).where(Room.name == room_name)).first()
+    if not room:
+        await websocket.close(code=4404)
+        return
+
+    # 3. Caller must be a member.
+    user = session.exec(select(User).where(User.identity_address == address)).first()
+    if not user or user not in room.members:
+        await websocket.close(code=4403)
+        return
+
+    await chat_manager.connect(room_name, websocket)
+    try:
+        # Send last 50 messages in chronological order.
+        recent = session.exec(
+            select(Message)
+            .where(Message.room_id == room.id)
+            .order_by(Message.created_at.desc())
+            .limit(50)
+        ).all()
+        username_cache: dict[str, str] = {}
+
+        def _username_for(addr: str) -> str:
+            cached = username_cache.get(addr)
+            if cached is not None:
+                return cached
+            sender = session.exec(
+                select(User).where(User.identity_address == addr)
+            ).first()
+            name = sender.username if sender else addr
+            username_cache[addr] = name
+            return name
+
+        history_payload = json.dumps(
+            {
+                "type": "history",
+                "messages": [
+                    _msg_dict(m, _username_for(m.sender_address))
+                    for m in reversed(recent)
+                ],
+            }
+        )
+        await websocket.send_text(history_payload)
+
+        while True:
+            raw = await websocket.receive_text()
+            try:
+                data = json.loads(raw)
+                content = str(data.get("content", "")).strip()
+            except (ValueError, TypeError):
+                continue
+            if not content or len(content) > 1000:
+                continue
+
+            msg = Message(
+                room_id=room.id,
+                sender_address=address,
+                content=content,
+            )
+            session.add(msg)
+            session.commit()
+            session.refresh(msg)
+
+            await chat_manager.broadcast(
+                room_name,
+                json.dumps(
+                    {"type": "message", "message": _msg_dict(msg, user.username)}
+                ),
+            )
+    except WebSocketDisconnect:
+        chat_manager.disconnect(room_name, websocket)

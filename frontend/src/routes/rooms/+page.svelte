@@ -1,34 +1,28 @@
 <script lang="ts">
-	import { roomsStore } from '$lib/roomsStore';
+	import { onMount } from 'svelte';
+	import { roomsStore, type RoomSummary } from '$lib/roomsStore';
 	import { env } from '$env/dynamic/public';
 	import { enhance } from '$app/forms';
+	import { goto } from '$app/navigation';
 	import type { PageProps } from './$types';
+
+	import InnerPanel from '$lib/components/chrome/InnerPanel.svelte';
+	import SectionTitle from '$lib/components/chrome/SectionTitle.svelte';
+	import OrnateButton from '$lib/components/chrome/OrnateButton.svelte';
+	import StoneCheckbox from '$lib/components/chrome/StoneCheckbox.svelte';
+	import Cycler from '$lib/components/chrome/Cycler.svelte';
+	import ListRow from '$lib/components/chrome/ListRow.svelte';
+	import PipMeter from '$lib/components/chrome/PipMeter.svelte';
+	import ProgressBar from '$lib/components/chrome/ProgressBar.svelte';
+	import SystemDialog from '$lib/components/chrome/SystemDialog.svelte';
+	import Crest from '$lib/components/chrome/Crest.svelte';
+
+	import { getHintsState } from '$lib/hintsContext.svelte';
 
 	let { data, form }: PageProps = $props();
 
+	// --- Ping ---
 	let currentPing = $state<number | string>('...');
-	let isCreating = $state(false);
-
-	let toastMessage = $state<{ text: string; type: 'success' | 'error' } | null>(null);
-	let toastTimeout: ReturnType<typeof setTimeout>;
-
-	function showToast(text: string, type: 'success' | 'error') {
-		toastMessage = { text, type };
-		if (toastTimeout) clearTimeout(toastTimeout);
-		toastTimeout = setTimeout(() => {
-			toastMessage = null;
-		}, 4500);
-	}
-
-	$effect(() => {
-		if (form) {
-			if (form.error) {
-				showToast(form.error, 'error');
-			} else if (form.success && form.message) {
-				showToast(form.message, 'success');
-			}
-		}
-	});
 
 	async function measurePing() {
 		const start = performance.now();
@@ -48,8 +42,8 @@
 		return () => clearInterval(interval);
 	});
 
+	// --- Time ---
 	let currentTime = $state(new Date());
-
 	$effect(() => {
 		const interval = setInterval(() => {
 			currentTime = new Date();
@@ -57,675 +51,920 @@
 		return () => clearInterval(interval);
 	});
 
-	let activeRooms = $derived($roomsStore.filter((r) => new Date(r.expires_at) > currentTime));
-
 	function getRemainingTime(expiresAtIso: string): string {
 		const expiry = new Date(expiresAtIso).getTime();
 		const diff = expiry - currentTime.getTime();
 		if (diff <= 0) return '00:00';
-
 		const minutes = Math.floor(diff / 60000);
 		const seconds = Math.floor((diff % 60000) / 1000);
 		return `${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
 	}
+
+	function timerLow(room: RoomSummary): boolean {
+		return new Date(room.expires_at).getTime() - currentTime.getTime() < 60_000;
+	}
+
+	function pipForRoom(_room: RoomSummary): number {
+		return 3;
+	}
+
+	// --- Active rooms ---
+	let activeRooms = $derived($roomsStore.filter((r) => new Date(r.expires_at) > currentTime));
+
+	// --- Filters ---
+	interface FilterState {
+		name: string;
+		slots2: boolean;
+		slots4: boolean;
+		slots8: boolean;
+		slots16: boolean;
+		status: 'ANY' | 'OPEN' | 'FULL';
+		ping: 'ANY' | 'LOW' | 'MID' | 'HIGH';
+	}
+
+	let filters = $state<FilterState>({
+		name: '',
+		slots2: false,
+		slots4: false,
+		slots8: false,
+		slots16: false,
+		status: 'ANY',
+		ping: 'ANY'
+	});
+
+	function resetFilters() {
+		filters.name = '';
+		filters.slots2 = false;
+		filters.slots4 = false;
+		filters.slots8 = false;
+		filters.slots16 = false;
+		filters.status = 'ANY';
+		filters.ping = 'ANY';
+	}
+
+	let filteredRooms = $derived.by(() => {
+		const anySlot =
+			filters.slots2 || filters.slots4 || filters.slots8 || filters.slots16;
+		const q = filters.name.trim().toLowerCase();
+
+		return activeRooms.filter((room) => {
+			if (q) {
+				const hay = `${room.name} ${room.game}`.toLowerCase();
+				if (!hay.includes(q)) return false;
+			}
+			if (anySlot) {
+				const m = room.players_max;
+				const matched =
+					(filters.slots2 && m === 2) ||
+					(filters.slots4 && m === 4) ||
+					(filters.slots8 && m === 8) ||
+					(filters.slots16 && m >= 16);
+				if (!matched) return false;
+			}
+			if (filters.status === 'OPEN' && room.players_active >= room.players_max) return false;
+			if (filters.status === 'FULL' && room.players_active < room.players_max) return false;
+			return true;
+		});
+	});
+
+	// --- Selection ---
+	let selectedName = $state<string | null>(null);
+	let selectedRoom = $derived(
+		selectedName ? filteredRooms.find((r) => r.name === selectedName) ?? null : null
+	);
+
+	$effect(() => {
+		// If the selected room disappears (filter or expiry), clear selection.
+		if (selectedName && !filteredRooms.some((r) => r.name === selectedName)) {
+			selectedName = null;
+		}
+	});
+
+	// --- Updated-at clock for the section title trail ---
+	let updatedHHMM = $derived(
+		`${currentTime.getHours().toString().padStart(2, '0')}:${currentTime
+			.getMinutes()
+			.toString()
+			.padStart(2, '0')}`
+	);
+
+	// --- Toast ---
+	let toastMessage = $state<{ text: string; type: 'success' | 'error' } | null>(null);
+	let toastTimeout: ReturnType<typeof setTimeout>;
+
+	function showToast(text: string, type: 'success' | 'error') {
+		toastMessage = { text, type };
+		if (toastTimeout) clearTimeout(toastTimeout);
+		toastTimeout = setTimeout(() => {
+			toastMessage = null;
+		}, 4500);
+	}
+
+	$effect(() => {
+		if (form) {
+			if ('error' in form && form.error) {
+				showToast(form.error, 'error');
+			} else if ('success' in form && form.success && form.message) {
+				showToast(form.message, 'success');
+			}
+		}
+	});
+
+	// --- Create dialog ---
+	let createOpen = $state(false);
+
+	// --- Refs ---
+	let nameInputRef = $state<HTMLInputElement | null>(null);
+
+	// --- Hints + global keys ---
+	const hintsState = getHintsState();
+
+	$effect(() => {
+		hintsState?.set([
+			{ key: 'Enter', label: 'Open', tone: 'gold' },
+			{ key: 'R', label: 'Refresh', tone: 'green' },
+			{ key: '/', label: 'Search', tone: 'amber' },
+			{ key: 'N', label: 'Create', tone: 'gold' },
+			{ key: 'Esc', label: 'Back', tone: 'red' }
+		]);
+	});
+
+	onMount(() => {
+		const handler = (e: KeyboardEvent) => {
+			const target = e.target as HTMLElement | null;
+			const tag = target?.tagName;
+			const isTyping =
+				tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT' || target?.isContentEditable;
+
+			if (e.key === 'Escape') {
+				if (createOpen) {
+					createOpen = false;
+					e.preventDefault();
+					return;
+				}
+				if (selectedName) {
+					selectedName = null;
+					e.preventDefault();
+					return;
+				}
+				if (!isTyping) {
+					history.back();
+				}
+				return;
+			}
+
+			if (isTyping) return;
+
+			if (e.key === '/') {
+				e.preventDefault();
+				nameInputRef?.focus();
+				return;
+			}
+			if (e.key === 'r' || e.key === 'R') {
+				e.preventDefault();
+				location.reload();
+				return;
+			}
+			if (e.key === 'n' || e.key === 'N') {
+				if (data.isAuthenticated) {
+					e.preventDefault();
+					createOpen = true;
+				}
+				return;
+			}
+			if (e.key === 'Enter' && selectedRoom && data.isAuthenticated && data.user) {
+				const isMember = selectedRoom.member_addresses.includes(data.user.address);
+				if (isMember) {
+					e.preventDefault();
+					goto(`/rooms/${encodeURIComponent(selectedRoom.name)}`);
+				}
+			}
+		};
+
+		window.addEventListener('keydown', handler);
+		return () => window.removeEventListener('keydown', handler);
+	});
 </script>
 
 <svelte:head>
-	<title>PlayLink - Rooms</title>
+	<title>PlayLink — Game List</title>
 </svelte:head>
 
-<div class="rooms-page-container">
-	<div class="rooms-page">
-		<header class="header">
-			<div class="logo-section">
-				<h1 class="logo">PLAYLINK</h1>
-				<p class="description">
-					Find players for forgotten servers, overhaul mods, and retro netplay nights without
-					account walls. This concept focuses on instant browsing, strong atmosphere, and a clear
-					path to a later backend.
-				</p>
+<div class="rooms-page">
+	<header class="page-head">
+		<SectionTitle title="Game List" size="large" tone="gold">
+			{#snippet children()}
+				<span>{activeRooms.length} ACTIVE · UPDATED {updatedHHMM}</span>
+			{/snippet}
+		</SectionTitle>
+	</header>
 
-				{#if data.isAuthenticated}
-					<div class="actions">
-						<button class="btn btn-primary" onclick={() => (isCreating = !isCreating)}>
-							{isCreating ? 'CANCEL' : 'CREATE ROOM'}
-						</button>
-					</div>
-				{:else}
-					<p class="description" style="color: #ff6b6b; font-size: 0.85rem;">
-						» Please sign in to create or join rooms.
-					</p>
-				{/if}
-			</div>
+	<div class="split">
+		<div class="list-col">
+			<InnerPanel padded={false}>
+				<div
+					class="list"
+					style="--list-cols: 1.6fr 1fr 0.6fr 0.6fr 0.5fr; --list-gap: 1rem;"
+				>
+					<ListRow header>
+						{#snippet children()}
+							<span>Name</span>
+							<span>Game</span>
+							<span>Slots</span>
+							<span>Ping</span>
+							<span>Timer</span>
+						{/snippet}
+					</ListRow>
 
-			<div class="stats-grid">
-				<div class="stat-card">
-					<h3 class="stat-title">OPEN ROOMS</h3>
-					<div class="stat-value">{activeRooms.length}</div>
-					<p class="stat-desc">Lobbies currently broadcasting</p>
-				</div>
-				<div class="stat-card">
-					<h3 class="stat-title">AVERAGE PING</h3>
-					<div class="stat-value">
-						{#if typeof currentPing === 'number'}
-							{currentPing} MS
-						{:else}
-							{currentPing}
+					<div class="rows scroll-d2">
+						{#each filteredRooms as room (room.name)}
+							<ListRow
+								selected={selectedName === room.name}
+								onclick={() => (selectedName = room.name)}
+							>
+								{#snippet children()}
+									<span class="cell-name fw-700">{room.name}</span>
+									<span class="cell-game">{room.game}</span>
+									<span class="cell-slots mono">
+										{room.players_active}/{room.players_max}
+									</span>
+									<span class="cell-ping">
+										<PipMeter value={pipForRoom(room)} tone="auto" size="sm" />
+									</span>
+									<span class="cell-timer mono" class:warn={timerLow(room)}>
+										{getRemainingTime(room.expires_at)}
+									</span>
+								{/snippet}
+							</ListRow>
+						{/each}
+
+						{#if filteredRooms.length === 0}
+							<div class="empty">
+								<Crest size={64} tone="iron" />
+								<p>Awaiting signals…</p>
+							</div>
 						{/if}
 					</div>
-					<p class="stat-desc">Healthy enough for browse mode</p>
 				</div>
-			</div>
-		</header>
+			</InnerPanel>
+		</div>
 
-		<section class="board-section">
-			{#if isCreating}
-				<div class="create-room-panel">
-					<h3 class="panel-title">CONFIGURE SIGNAL</h3>
+		<aside class="side-col">
+			<InnerPanel>
+				{#snippet children()}
+					{#if selectedRoom}
+						{@const room = selectedRoom}
+						{@const isMember =
+							data.isAuthenticated &&
+							data.user !== null &&
+							room.member_addresses.includes(data.user.address)}
+						{@const isFull = room.players_active >= room.players_max}
 
-					{#if form?.error}
-						<p class="error-msg">{form.error}</p>
-					{/if}
+						<SectionTitle title={room.name} size="normal" tone="bone" />
 
-					<form
-						method="POST"
-						action="?/create"
-						use:enhance={() => {
-							return async ({ update }) => {
-								await update();
-								if (!form?.error) isCreating = false;
-							};
-						}}
-					>
-						<div class="form-group">
-							<label for="name">Identifier (Lobby Name)</label>
-							<input type="text" id="name" name="name" required placeholder="e.g. My Retro Match" />
-						</div>
+						<dl class="details">
+							<dt>Game</dt>
+							<dd>{room.game}</dd>
+							<dt>Players</dt>
+							<dd class="mono">{room.players_active} / {room.players_max}</dd>
+							<dt>Expires</dt>
+							<dd class="mono" class:warn={timerLow(room)}>
+								{getRemainingTime(room.expires_at)}
+							</dd>
+						</dl>
 
-						<div class="form-group">
-							<label for="game">Target Program (Game)</label>
-							<select id="game" name="game" required disabled={!data.games.length}>
-								{#if data.games.length > 0}
-									{#each data.games as game (game)}
-										<option value={game}>{game}</option>
-									{/each}
-								{:else}
-									<option value="" disabled selected>No games available</option>
-								{/if}
-							</select>
-						</div>
-
-						<div class="form-group">
-							<label for="players_max">Max Connections (Slots)</label>
-							<input
-								type="number"
-								id="players_max"
-								name="players_max"
-								min="2"
-								max="64"
-								value="4"
-								required
+						<div class="bar-wrap">
+							<ProgressBar
+								value={room.players_active}
+								max={room.players_max}
+								ticks
+								variant="gold"
 							/>
 						</div>
 
-						<button type="submit" class="btn btn-primary" style="margin-top: 1rem;"
-							>BROADCAST</button
-						>
-					</form>
-				</div>
-			{/if}
-
-			<div class="section-header" style={isCreating ? 'margin-top: 3rem;' : ''}>
-				<h2 class="section-title">— ACTIVE ROOMS</h2>
-			</div>
-
-			{#if activeRooms.length === 0}
-				<div class="empty-state">
-					<p>Awaiting signals...</p>
-				</div>
-			{:else}
-				<div class="signals-grid">
-					{#each activeRooms as room (room.id ?? room.name)}
-						<div class="signal-card">
-							<div class="signal-header">
-								<span class="signal-badge">LOBBY</span>
-								<span
-									class="signal-slots"
-									style="color: #ff6b6b; margin-right: auto; padding-left: 0.5rem; font-family: ui-monospace, sans-serif;"
+						{#if data.isAuthenticated}
+							<div class="actions stack">
+								<form
+									method="POST"
+									action="?/join"
+									use:enhance
+									class="action-form"
 								>
-									{getRemainingTime(room.expires_at)}
-								</span>
-								<span class="signal-slots">{room.players_active} / {room.players_max} SLOTS</span>
-							</div>
-							<div class="signal-name">{room.name}</div>
-							<div class="signal-game">Playing: {room.game}</div>
-							<div class="signal-footer">
-								<div class="progress-bar">
-									<div
-										class="progress-fill"
-										style="width: {(room.players_active / room.players_max) * 100}%"
-									></div>
-								</div>
+									<input type="hidden" name="room_name" value={room.name} />
+									<OrnateButton
+										variant="primary"
+										size="md"
+										type="submit"
+										fullWidth
+										disabled={isMember || isFull}
+									>
+										{#snippet children()}Join{/snippet}
+									</OrnateButton>
+								</form>
 
-								{#if data.isAuthenticated && data.user}
-									{@const isMember = room.member_addresses.includes(data.user.address)}
-									{@const isFull = room.players_active >= room.players_max}
-									<div class="card-actions">
-										<form method="POST" action="?/join" use:enhance>
-											<input type="hidden" name="room_name" value={room.name} />
-											<button type="submit" class="card-btn join" disabled={isMember || isFull}>
-												[ JOIN ]
-											</button>
-										</form>
+								<form
+									method="POST"
+									action="?/leave"
+									use:enhance
+									class="action-form"
+								>
+									<input type="hidden" name="room_name" value={room.name} />
+									<OrnateButton
+										variant="danger"
+										size="md"
+										type="submit"
+										fullWidth
+										disabled={!isMember}
+									>
+										{#snippet children()}Leave{/snippet}
+									</OrnateButton>
+								</form>
 
-										<form method="POST" action="?/leave" use:enhance>
-											<input type="hidden" name="room_name" value={room.name} />
-											<button type="submit" class="card-btn leave" disabled={!isMember}>
-												[ LEAVE ]
-											</button>
-										</form>
-
-										{#if isMember}
-											<a class="card-btn open" href="/rooms/{encodeURIComponent(room.name)}">
-												[ OPEN ]
-											</a>
-										{/if}
-									</div>
+								{#if isMember}
+									<OrnateButton
+										variant="secondary"
+										size="md"
+										fullWidth
+										href="/rooms/{encodeURIComponent(room.name)}"
+									>
+										{#snippet children()}Open{/snippet}
+									</OrnateButton>
 								{/if}
+
+								<OrnateButton
+									variant="ghost"
+									size="sm"
+									fullWidth
+									onclick={() => (selectedName = null)}
+								>
+									{#snippet children()}Back to Filters{/snippet}
+								</OrnateButton>
+							</div>
+						{:else}
+							<p class="auth-note">Identity required to join or leave.</p>
+							<OrnateButton
+								variant="ghost"
+								size="sm"
+								fullWidth
+								onclick={() => (selectedName = null)}
+							>
+								{#snippet children()}Back to Filters{/snippet}
+							</OrnateButton>
+						{/if}
+					{:else}
+						<SectionTitle title="Filters" size="small" tone="gold" />
+
+						<div class="filter-group">
+							<span class="filter-label small-caps">Max Slots</span>
+							<div class="checks">
+								<StoneCheckbox bind:checked={filters.slots2} label="2" size="sm" />
+								<StoneCheckbox bind:checked={filters.slots4} label="4" size="sm" />
+								<StoneCheckbox bind:checked={filters.slots8} label="8" size="sm" />
+								<StoneCheckbox bind:checked={filters.slots16} label="16+" size="sm" />
 							</div>
 						</div>
-					{/each}
-				</div>
-			{/if}
-		</section>
+
+						<div class="filter-group">
+							<Cycler
+								label="Status"
+								bind:value={filters.status}
+								values={['ANY', 'OPEN', 'FULL']}
+							/>
+						</div>
+
+						<div class="filter-group">
+							<Cycler
+								label="Ping"
+								bind:value={filters.ping}
+								values={['ANY', 'LOW', 'MID', 'HIGH']}
+							/>
+						</div>
+
+						<div class="filter-actions">
+							<OrnateButton
+								variant="secondary"
+								size="sm"
+								fullWidth
+								onclick={resetFilters}
+							>
+								{#snippet children()}Reset Filters{/snippet}
+							</OrnateButton>
+						</div>
+
+						<SectionTitle title="Name Filter" size="small" tone="gold" />
+						<div class="name-filter">
+							<input
+								class="text-input bevel-in"
+								type="text"
+								bind:value={filters.name}
+								bind:this={nameInputRef}
+								placeholder="Filter by name…"
+							/>
+						</div>
+
+						<SectionTitle title="Status" size="small" tone="gold" />
+						<div class="stats">
+							<div class="stat">
+								<span class="stat-label small-caps">Open</span>
+								<span class="stat-value etched-bone">{activeRooms.length}</span>
+							</div>
+							<div class="stat">
+								<span class="stat-label small-caps">Ping</span>
+								<span class="stat-value mono">
+									{currentPing}
+									<small>MS</small>
+								</span>
+							</div>
+						</div>
+					{/if}
+				{/snippet}
+			</InnerPanel>
+		</aside>
 	</div>
 </div>
 
-{#if toastMessage}
-	<!-- svelte-ignore a11y_click_events_have_key_events -->
-	<!-- svelte-ignore a11y_no_static_element_interactions -->
-	<div
-		class="toast {toastMessage.type}"
-		onclick={() => {
-			toastMessage = null;
-		}}
+<div class="create-fab">
+	{#if !data.isAuthenticated}
+		<span class="auth-warn small-caps">Identity required</span>
+	{/if}
+	<OrnateButton
+		variant="primary"
+		size="md"
+		disabled={!data.isAuthenticated}
+		onclick={() => (createOpen = true)}
 	>
-		<div class="toast-indicator"></div>
-		<div class="toast-content">
-			<div class="toast-title">
-				{toastMessage.type === 'error' ? 'SYSTEM ERROR' : 'SYSTEM CONFIRM'}
+		{#snippet children()}+ Create Lobby{/snippet}
+	</OrnateButton>
+</div>
+
+<SystemDialog
+	bind:open={createOpen}
+	title="Configure Signal"
+	tone="gold"
+	modal
+	width="480px"
+	onclose={() => (createOpen = false)}
+>
+	{#snippet children()}
+		{#if form && 'error' in form && form.error}
+			<p class="dialog-error">{form.error}</p>
+		{/if}
+
+		<form
+			id="create-form"
+			method="POST"
+			action="?/create"
+			use:enhance={() => {
+				return async ({ update }) => {
+					await update();
+					if (!form || !('error' in form) || !form.error) {
+						createOpen = false;
+					}
+				};
+			}}
+		>
+			<div class="form-row">
+				<label for="create-name" class="small-caps">Identifier (Lobby Name)</label>
+				<input
+					id="create-name"
+					class="text-input bevel-in"
+					type="text"
+					name="name"
+					required
+					placeholder="e.g. My Retro Match"
+				/>
 			</div>
-			<div class="toast-text">{toastMessage.text}</div>
-		</div>
-		<div class="toast-close">×</div>
-	</div>
+
+			<div class="form-row">
+				<label for="create-game" class="small-caps">Target Program (Game)</label>
+				<select
+					id="create-game"
+					class="text-input bevel-in"
+					name="game"
+					required
+					disabled={!data.games.length}
+				>
+					{#if data.games.length > 0}
+						{#each data.games as g (g)}
+							<option value={g}>{g}</option>
+						{/each}
+					{:else}
+						<option value="" disabled selected>No games available</option>
+					{/if}
+				</select>
+			</div>
+
+			<div class="form-row">
+				<label for="create-slots" class="small-caps">Max Connections (Slots)</label>
+				<input
+					id="create-slots"
+					class="text-input bevel-in"
+					type="number"
+					name="players_max"
+					min="2"
+					max="64"
+					value="4"
+					required
+				/>
+			</div>
+		</form>
+	{/snippet}
+
+	{#snippet footer()}
+		<OrnateButton variant="ghost" size="md" onclick={() => (createOpen = false)}>
+			{#snippet children()}Cancel{/snippet}
+		</OrnateButton>
+		<OrnateButton
+			variant="primary"
+			size="md"
+			onclick={() => {
+				const f = document.getElementById('create-form') as HTMLFormElement | null;
+				f?.requestSubmit();
+			}}
+		>
+			{#snippet children()}Broadcast{/snippet}
+		</OrnateButton>
+	{/snippet}
+</SystemDialog>
+
+{#if toastMessage}
+	{@const toast = toastMessage}
+	<SystemDialog
+		open={true}
+		title={toast.type === 'error' ? 'System Error' : 'System Confirm'}
+		tone={toast.type === 'error' ? 'blood' : 'green'}
+		position="bottom-right"
+		onclose={() => (toastMessage = null)}
+	>
+		{#snippet children()}
+			<p class="toast-text">{toast.text}</p>
+		{/snippet}
+	</SystemDialog>
 {/if}
 
 <style>
-	.toast {
-		position: fixed;
-		bottom: 2rem;
-		right: 2rem;
-		z-index: 100;
-		background: #0d0d0d;
-		border: 1px solid #332f26;
-		box-shadow:
-			0 10px 30px rgba(0, 0, 0, 0.8),
-			inset 0 0 15px rgba(0, 0, 0, 0.5);
-		padding: 1rem 1.5rem;
-		display: flex;
-		align-items: center;
-		gap: 1rem;
-		min-width: 300px;
-		max-width: 450px;
-		cursor: pointer;
-		animation: slideIn 0.3s cubic-bezier(0.16, 1, 0.3, 1) forwards;
-	}
-
-	.toast.success {
-		border-color: #4a5c40;
-	}
-
-	.toast.success .toast-indicator {
-		background-color: #a4ce82;
-		box-shadow: 0 0 10px rgba(164, 206, 130, 0.3);
-	}
-
-	.toast.success .toast-title {
-		color: #a4ce82;
-	}
-
-	.toast.error {
-		border-color: #7a1d1d;
-	}
-
-	.toast.error .toast-indicator {
-		background-color: #ff6b6b;
-		box-shadow: 0 0 10px rgba(255, 107, 107, 0.3);
-	}
-
-	.toast.error .toast-title {
-		color: #ff6b6b;
-	}
-
-	.toast-indicator {
-		width: 4px;
-		height: 100%;
-		position: absolute;
-		left: 0;
-		top: 0;
-	}
-
-	.toast-content {
-		flex: 1;
-		padding-left: 0.5rem;
-	}
-
-	.toast-title {
-		font-family: ui-monospace, SFMono-Regular, monospace;
-		font-size: 0.7rem;
-		letter-spacing: 0.1em;
-		margin-bottom: 0.3rem;
-	}
-
-	.toast-text {
-		color: #f1e9cd;
-		font-size: 0.95rem;
-		line-height: 1.4;
-	}
-
-	.toast-close {
-		color: #8c877a;
-		font-size: 1.5rem;
-		line-height: 1;
-	}
-
-	.toast:hover .toast-close {
-		color: #f1e9cd;
-	}
-
-	@keyframes slideIn {
-		0% {
-			opacity: 0;
-			transform: translateX(20px) scale(0.95);
-		}
-		100% {
-			opacity: 1;
-			transform: translateX(0) scale(1);
-		}
-	}
-
-	.rooms-page-container {
-		background-color: #0d0d0d;
-		color: #e4d8b8;
-		font-family:
-			'Inter',
-			ui-sans-serif,
-			system-ui,
-			-apple-system,
-			sans-serif;
-		min-height: 100vh;
-		padding: 2rem 0;
-	}
-
 	.rooms-page {
-		max-width: 1200px;
-		margin: 0 auto;
-		padding: 2.5rem;
-		background: #111111;
-		border: 1px solid #23201a;
-		border-radius: 12px;
-		box-shadow:
-			inset 0 0 40px rgba(0, 0, 0, 0.5),
-			0 10px 40px rgba(0, 0, 0, 0.8);
-	}
-
-	.top-bar {
-		margin-bottom: 2rem;
-	}
-
-	.eyebrow {
-		font-family: ui-monospace, SFMono-Regular, monospace;
-		font-size: 0.7rem;
-		letter-spacing: 0.15em;
-		color: #6a675d;
-		text-transform: uppercase;
-	}
-
-	.header {
 		display: flex;
-		flex-wrap: wrap;
-		gap: 4rem;
-		margin-bottom: 3rem;
-		border-bottom: 1px solid #1a1916;
-		padding-bottom: 3rem;
-	}
-
-	.logo-section {
+		flex-direction: column;
+		gap: 1.25rem;
+		min-height: 0;
 		flex: 1;
-		min-width: 300px;
-		max-width: 600px;
+		padding: 0.5rem 0 4rem;
 	}
 
-	.logo {
-		font-family: 'Exocet', serif;
-		font-size: 4.5rem;
-		font-weight: normal;
-		color: #f1e9cd;
-		letter-spacing: 0.05em;
-		margin: 0 0 1.5rem 0;
-		text-shadow: 0 0 20px rgba(241, 233, 205, 0.15);
+	.page-head {
+		padding: 0 0.5rem;
 	}
 
-	.description {
-		color: #8c877a;
-		font-size: 1rem;
-		line-height: 1.6;
-		margin-bottom: 2rem;
+	.split {
+		display: grid;
+		grid-template-columns: 1fr;
+		gap: 1.25rem;
+		min-height: 0;
+		flex: 1;
 	}
 
-	.badges {
+	@media (min-width: 1024px) {
+		.split {
+			grid-template-columns: 7fr 3fr;
+			position: relative;
+		}
+
+		.split::before {
+			content: '';
+			position: absolute;
+			top: 0;
+			bottom: 0;
+			left: calc(70% + 0.5rem);
+			width: 1px;
+			background: var(--stone-5);
+			pointer-events: none;
+			opacity: 0.5;
+		}
+
+		.side-col {
+			position: sticky;
+			top: 0;
+			align-self: start;
+			max-height: calc(100vh - 8rem);
+			overflow: auto;
+		}
+	}
+
+	.list-col {
+		display: flex;
+		min-height: 0;
+	}
+
+	.list-col :global(.inner-panel) {
+		display: flex;
+		flex-direction: column;
+		min-height: 480px;
+	}
+
+	.list {
+		display: flex;
+		flex-direction: column;
+		min-height: 0;
+		flex: 1;
+	}
+
+	.rows {
+		display: flex;
+		flex-direction: column;
+		flex: 1;
+		min-height: 0;
+		max-height: calc(100vh - 16rem);
+		overflow-y: auto;
+	}
+
+	.empty {
+		display: flex;
+		flex-direction: column;
+		align-items: center;
+		justify-content: center;
+		gap: 1rem;
+		padding: 4rem 1rem;
+		flex: 1;
+	}
+
+	.empty p {
+		margin: 0;
+		font-style: italic;
+		color: var(--bone-muted);
+		font-family: var(--font-display);
+		letter-spacing: var(--track-loose);
+	}
+
+	/* Cells */
+	.cell-name {
+		color: var(--bone-bright);
+		overflow: hidden;
+		text-overflow: ellipsis;
+		white-space: nowrap;
+	}
+
+	.cell-game {
+		color: var(--bone-muted);
+		overflow: hidden;
+		text-overflow: ellipsis;
+		white-space: nowrap;
+	}
+
+	.cell-slots {
+		color: var(--bone);
+	}
+
+	.cell-timer {
+		color: var(--bone);
+	}
+
+	.cell-timer.warn {
+		color: var(--blood-bright);
+	}
+
+	.cell-ping {
+		display: inline-flex;
+		align-items: center;
+	}
+
+	.fw-700 {
+		font-weight: 700;
+	}
+
+	.mono {
+		font-family: var(--font-mono);
+		letter-spacing: 0.04em;
+		font-feature-settings: normal;
+		text-transform: none;
+	}
+
+	/* Side panel */
+	.details {
+		display: grid;
+		grid-template-columns: auto 1fr;
+		gap: 0.4rem 1rem;
+		margin: 0 0 1rem 0;
+		padding: 0.5rem 0 1rem;
+		border-bottom: 1px solid var(--stone-5);
+	}
+
+	.details dt {
+		font-family: var(--font-display);
+		font-size: 0.7rem;
+		letter-spacing: var(--track-extra);
+		text-transform: uppercase;
+		color: var(--bone-muted);
+		font-feature-settings:
+			'smcp' 1,
+			'c2sc' 1;
+	}
+
+	.details dd {
+		margin: 0;
+		color: var(--bone-bright);
+		font-family: var(--font-display);
+		font-size: 0.85rem;
+		letter-spacing: var(--track-loose);
+		text-transform: uppercase;
+	}
+
+	.details dd.mono {
+		font-family: var(--font-mono);
+		text-transform: none;
+		letter-spacing: 0.04em;
+	}
+
+	.details dd.warn {
+		color: var(--blood-bright);
+	}
+
+	.bar-wrap {
+		margin-bottom: 1.25rem;
+	}
+
+	.actions.stack {
+		display: flex;
+		flex-direction: column;
+		gap: 0.6rem;
+	}
+
+	.action-form {
+		display: contents;
+	}
+
+	.auth-note {
+		font-family: var(--font-display);
+		font-size: 0.78rem;
+		letter-spacing: var(--track-loose);
+		color: var(--blood-bright);
+		text-transform: uppercase;
+		margin: 0 0 1rem 0;
+	}
+
+	.filter-group {
+		margin-bottom: 1.1rem;
+		display: flex;
+		flex-direction: column;
+		gap: 0.5rem;
+	}
+
+	.filter-label {
+		font-family: var(--font-display);
+		font-size: 0.7rem;
+		letter-spacing: var(--track-extra);
+		color: var(--bone-muted);
+		text-transform: uppercase;
+		font-feature-settings:
+			'smcp' 1,
+			'c2sc' 1;
+	}
+
+	.checks {
 		display: flex;
 		flex-wrap: wrap;
-		gap: 0.8rem;
-		margin-bottom: 2rem;
+		gap: 0.75rem 1rem;
 	}
 
-	.badge {
-		font-family: ui-monospace, SFMono-Regular, monospace;
-		font-size: 0.65rem;
-		letter-spacing: 0.1em;
-		color: #8c877a;
-		background: #191815;
-		border: 1px solid #28251e;
-		padding: 0.4rem 0.8rem;
-		border-radius: 20px;
+	.filter-actions {
+		margin-bottom: 1.25rem;
 	}
 
-	.actions {
-		display: flex;
-		gap: 1rem;
+	.name-filter {
+		margin-bottom: 1.25rem;
 	}
 
-	.btn {
-		font-family: ui-monospace, SFMono-Regular, monospace;
-		font-size: 0.75rem;
-		letter-spacing: 0.15em;
-		padding: 0.8rem 1.5rem;
-		border-radius: 6px;
-		cursor: pointer;
-		text-transform: uppercase;
-		transition: all 0.2s;
+	.text-input {
+		width: 100%;
+		background: linear-gradient(180deg, #060503 0%, #0a0907 100%);
+		border: 1px solid var(--stone-5);
+		border-radius: 0;
+		color: var(--bone-bright);
+		padding: 0.65rem 0.8rem;
+		font-family: var(--font-mono);
+		font-size: 0.85rem;
+		letter-spacing: 0.03em;
 	}
 
-	.btn-primary {
-		background: #e3bc74;
-		color: #1a1405;
-		border: none;
-		box-shadow: 0 0 15px rgba(227, 188, 116, 0.3);
-		font-weight: bold;
+	.text-input::placeholder {
+		color: var(--bone-dim);
+		font-style: italic;
 	}
 
-	.btn-primary:hover {
-		background: #f1cf8f;
-		box-shadow: 0 0 25px rgba(227, 188, 116, 0.5);
+	.text-input:focus {
+		outline: none;
+		border-color: var(--gold-muted);
+		box-shadow:
+			inset 0 1px 2px rgba(0, 0, 0, 0.85),
+			var(--glow-soft);
 	}
 
-	.btn-secondary {
-		background: transparent;
-		color: #a39c8c;
-		border: 1px solid #3d3930;
-	}
-
-	.btn-secondary:hover {
-		border-color: #e3bc74;
-		color: #e3bc74;
-	}
-
-	.stats-grid {
+	.stats {
 		display: grid;
 		grid-template-columns: 1fr 1fr;
-		gap: 1.5rem;
-		align-content: start;
+		gap: 0.75rem;
+		padding-top: 0.5rem;
 	}
 
-	.stat-card {
-		background: #141415;
-		border: 1px solid #25221b;
-		border-radius: 8px;
-		padding: 1.5rem;
-		min-width: 200px;
+	.stat {
+		display: flex;
+		flex-direction: column;
+		gap: 0.25rem;
+		padding: 0.6rem 0.75rem;
+		border: 1px solid var(--stone-5);
+		background: linear-gradient(180deg, #0a0907 0%, #060503 100%);
 	}
 
-	.stat-title {
-		font-family: ui-monospace, SFMono-Regular, monospace;
-		font-size: 0.75rem;
-		letter-spacing: 0.15em;
-		color: #8c877a;
-		margin: 0 0 1rem 0;
-		font-weight: normal;
+	.stat-label {
+		font-family: var(--font-display);
+		font-size: 0.65rem;
+		letter-spacing: var(--track-extra);
+		color: var(--bone-muted);
+		text-transform: uppercase;
+		font-feature-settings:
+			'smcp' 1,
+			'c2sc' 1;
 	}
 
 	.stat-value {
-		font-family: 'Exocet', serif;
-		font-size: 2.5rem;
-		color: #e4d8b8;
-		margin-bottom: 0.5rem;
+		font-family: var(--font-display);
+		font-size: 1.4rem;
+		color: var(--bone-bright);
+		letter-spacing: var(--track-loose);
 	}
 
-	.stat-desc {
-		font-size: 0.75rem;
-		color: #5c584a;
-		margin: 0;
+	.stat-value.mono {
+		font-family: var(--font-mono);
+		font-size: 1.05rem;
+		letter-spacing: 0.04em;
+		text-transform: none;
 	}
 
-	.board-section {
-		background: #141415;
-		border: 1px solid #25221b;
-		border-radius: 10px;
-		padding: 2rem;
-	}
-
-	.section-title {
-		font-family: ui-monospace, SFMono-Regular, monospace;
-		font-size: 0.8rem;
-		letter-spacing: 0.2em;
-		color: #8c877a;
+	.stat-value small {
+		font-size: 0.6rem;
+		color: var(--bone-muted);
+		margin-left: 0.2rem;
+		font-family: var(--font-display);
+		letter-spacing: var(--track-loose);
 		text-transform: uppercase;
-		margin: 0 0 2rem 0;
 	}
 
-	.empty-state {
-		text-align: center;
-		color: #6a675d;
-		font-family: ui-monospace, monospace;
-		padding: 4rem;
-		border: 1px dashed #28251e;
-		border-radius: 6px;
-	}
-
-	.signals-grid {
-		display: grid;
-		grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
-		gap: 1.5rem;
-	}
-
-	.signal-card {
-		background: #0a0a0b;
-		border: 1px solid #28251e;
-		border-radius: 6px;
-		padding: 1.5rem;
-		transition: all 0.2s;
-	}
-
-	.signal-card:hover {
-		border-color: #585141;
-		box-shadow: 0 4px 20px rgba(0, 0, 0, 0.5);
-	}
-
-	.signal-header {
-		display: flex;
-		justify-content: space-between;
+	/* Floating create button */
+	.create-fab {
+		position: fixed;
+		right: 2rem;
+		bottom: 5.5rem;
+		display: inline-flex;
 		align-items: center;
-		margin-bottom: 1.2rem;
-		font-family: ui-monospace, monospace;
-		font-size: 0.65rem;
-		color: #8c877a;
-		letter-spacing: 0.1em;
+		gap: 0.75rem;
+		z-index: 50;
 	}
 
-	.signal-badge {
-		color: #d1b884;
-	}
-
-	.signal-name {
-		font-family: 'Exocet', serif;
-		font-size: 1.8rem;
-		color: #f1e9cd;
-		margin-bottom: 0.5rem;
-		text-transform: uppercase;
-		line-height: 1.1;
-	}
-
-	.signal-game {
-		font-family: ui-monospace, monospace;
-		font-size: 0.75rem;
-		color: #a39c8c;
-		margin-bottom: 1.5rem;
-		letter-spacing: 0.05em;
-	}
-
-	.signal-footer {
-		margin-top: 1rem;
-	}
-
-	.progress-bar {
-		height: 4px;
-		background: #25221b;
-		border-radius: 2px;
-		overflow: hidden;
-		display: flex;
-	}
-
-	.progress-fill {
-		background: #c29d59;
-		height: 100%;
-		transition: width 0.3s ease;
-	}
-
-	.create-room-panel {
-		background: #0a0a0b;
-		border: 1px solid #28251e;
-		border-radius: 8px;
-		padding: 2rem;
-		margin-bottom: 2rem;
-	}
-
-	.panel-title {
-		font-family: 'Exocet', serif;
-		color: #e3bc74;
-		margin: 0 0 1.5rem 0;
-		font-weight: normal;
-	}
-
-	.form-group {
-		margin-bottom: 1.5rem;
-	}
-
-	.form-group label {
-		display: block;
-		font-family: ui-monospace, monospace;
-		font-size: 0.75rem;
-		color: #8c877a;
-		margin-bottom: 0.5rem;
-		letter-spacing: 0.1em;
-		text-transform: uppercase;
-	}
-
-	.form-group input,
-	.form-group select {
-		width: 100%;
-		background: #141415;
-		border: 1px solid #28251e;
-		color: #e4d8b8;
-		padding: 0.8rem;
-		border-radius: 4px;
-		font-family: ui-monospace, monospace;
-		font-size: 0.9rem;
-	}
-
-	.form-group input:focus,
-	.form-group select:focus {
-		outline: none;
-		border-color: #e3bc74;
-	}
-
-	.error-msg {
-		color: #ff6b6b;
-		font-family: ui-monospace, monospace;
-		font-size: 0.8rem;
-		margin-bottom: 1.5rem;
-		padding: 0.8rem;
-		border: 1px solid #ff6b6b;
-		background: rgba(255, 107, 107, 0.1);
-		border-radius: 4px;
-	}
-
-	.card-actions {
-		display: flex;
-		gap: 0.5rem;
-		margin-top: 1rem;
-	}
-
-	.card-actions form,
-	.card-actions > .card-btn.open {
-		flex: 1;
-	}
-
-	.card-btn {
-		width: 100%;
-		background: transparent;
-		border: 1px solid #28251e;
-		color: #8c877a;
-		padding: 0.5rem;
-		font-family: ui-monospace, monospace;
+	.auth-warn {
+		font-family: var(--font-mono);
 		font-size: 0.7rem;
-		cursor: pointer;
-		border-radius: 4px;
-		transition: all 0.2s;
+		letter-spacing: var(--track-loose);
+		color: var(--blood-bright);
+		text-transform: uppercase;
+		padding: 0.45rem 0.7rem;
+		background: linear-gradient(180deg, #0a0907 0%, #060503 100%);
+		border: 1px solid #4a1414;
 	}
 
-	.card-btn:hover:not(:disabled) {
-		border-color: #e3bc74;
-		color: #e3bc74;
+	.dialog-error {
+		font-family: var(--font-mono);
+		font-size: 0.8rem;
+		color: var(--blood-bright);
+		margin: 0 0 1rem 0;
+		padding: 0.6rem 0.8rem;
+		border: 1px solid #4a1414;
+		background: rgba(181, 54, 54, 0.08);
 	}
 
-	.card-btn.join:hover:not(:disabled) {
-		border-color: #4caf50;
-		color: #4caf50;
+	.toast-text {
+		margin: 0;
+		font-family: var(--font-display);
+		font-size: 0.9rem;
+		color: var(--bone-bright);
+		letter-spacing: var(--track-loose);
 	}
 
-	.card-btn.leave:hover:not(:disabled) {
-		border-color: #ff6b6b;
-		color: #ff6b6b;
-	}
-
-	.card-btn.open {
+	/* Create dialog form rows */
+	.form-row {
+		margin-bottom: 1rem;
 		display: flex;
-		align-items: center;
-		justify-content: center;
-		text-decoration: none;
-		color: #e3bc74;
-		border-color: #3d3930;
+		flex-direction: column;
+		gap: 0.4rem;
 	}
 
-	.card-btn.open:hover {
-		border-color: #e3bc74;
-		background: rgba(227, 188, 116, 0.08);
-	}
-
-	.card-btn:disabled {
-		opacity: 0.3;
-		cursor: not-allowed;
+	.form-row label {
+		font-family: var(--font-display);
+		font-size: 0.7rem;
+		letter-spacing: var(--track-extra);
+		color: var(--bone-muted);
+		text-transform: uppercase;
+		font-feature-settings:
+			'smcp' 1,
+			'c2sc' 1;
 	}
 </style>

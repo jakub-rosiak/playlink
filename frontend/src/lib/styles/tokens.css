@@ -1,0 +1,138 @@
+/* Diablo 2 inspired design tokens for PlayLink. */
+:root {
+	/* --- Gold scale --- */
+	--gold-lit: #f1cf8f;
+	--gold-base: #e3bc74;
+	--gold-muted: #c29d59;
+	--gold-dark: #8a6c3a;
+	--gold-faint: rgba(227, 188, 116, 0.18);
+	--gold-glow: rgba(227, 188, 116, 0.38);
+
+	/* --- Stone scale (0=darkest, 7=lightest) --- */
+	--stone-0: #050403;
+	--stone-1: #0a0907;
+	--stone-2: #0e0c0a;
+	--stone-3: #14110d;
+	--stone-4: #1a1714;
+	--stone-5: #2a251c;
+	--stone-6: #3d3930;
+	--stone-7: #585141;
+
+	/* --- Bone (parchment text) --- */
+	--bone: #e4d8b8;
+	--bone-bright: #f1e9cd;
+	--bone-muted: #a39c8c;
+	--bone-dim: #6a675d;
+	--bone-faint: #5c584a;
+
+	/* --- Pip / status colors --- */
+	--pip-good: #7fbf5c;
+	--pip-mid: #e3a647;
+	--pip-bad: #c24545;
+	--pip-dim: #1d1a14;
+
+	/* --- Blood / danger --- */
+	--blood: #b53636;
+	--blood-bright: #d35858;
+	--blood-faint: rgba(181, 54, 54, 0.18);
+
+	/* --- Page surfaces --- */
+	--bg-page: #07060a;
+	--bg-frame: #14110d;
+	--bg-panel: #0c0a08;
+	--bg-deep: #050403;
+
+	/* --- Borders --- */
+	--border-stone: 1px solid var(--stone-5);
+	--border-iron: 1px solid var(--stone-6);
+	--border-gold: 1px solid var(--gold-muted);
+
+	/* --- Bevels (canonical) --- */
+	--bevel-out:
+		inset 0 1px 0 rgba(227, 188, 116, 0.14),
+		inset 1px 0 0 rgba(227, 188, 116, 0.07),
+		inset 0 -1px 0 rgba(0, 0, 0, 0.85),
+		inset -1px 0 0 rgba(0, 0, 0, 0.65),
+		0 1px 0 rgba(0, 0, 0, 0.55);
+	--bevel-in:
+		inset 0 1px 0 rgba(0, 0, 0, 0.85),
+		inset 1px 0 0 rgba(0, 0, 0, 0.65),
+		inset 0 -1px 0 rgba(227, 188, 116, 0.1),
+		inset -1px 0 0 rgba(227, 188, 116, 0.06);
+	--bevel-press:
+		inset 0 2px 4px rgba(0, 0, 0, 0.9),
+		inset 0 -1px 0 rgba(227, 188, 116, 0.06);
+
+	/* --- Glow (gold) --- */
+	--glow-soft: 0 0 12px rgba(227, 188, 116, 0.18);
+	--glow-mid: 0 0 18px rgba(227, 188, 116, 0.28);
+	--glow-strong: 0 0 28px rgba(227, 188, 116, 0.45);
+
+	/* --- Shadow / drops --- */
+	--shadow-panel:
+		0 12px 36px rgba(0, 0, 0, 0.85),
+		0 1px 0 rgba(227, 188, 116, 0.04);
+	--shadow-deep:
+		0 30px 80px rgba(0, 0, 0, 0.95),
+		0 0 0 1px rgba(0, 0, 0, 0.6);
+
+	/* --- Hairline gold rule (used after section titles) --- */
+	--hair-gold: linear-gradient(
+		90deg,
+		rgba(194, 157, 89, 0.85) 0%,
+		rgba(194, 157, 89, 0.55) 60%,
+		transparent 100%
+	);
+	--hair-gold-full: linear-gradient(
+		90deg,
+		transparent 0%,
+		rgba(194, 157, 89, 0.7) 8%,
+		rgba(194, 157, 89, 0.7) 92%,
+		transparent 100%
+	);
+
+	/* --- Type scale --- */
+	--fs-display: 5rem;
+	--fs-h1: 2.5rem;
+	--fs-h2: 1.6rem;
+	--fs-h3: 1.1rem;
+	--fs-body: 0.95rem;
+	--fs-small: 0.85rem;
+	--fs-label: 0.72rem;
+	--fs-tiny: 0.62rem;
+
+	/* --- Spacing --- */
+	--sp-1: 4px;
+	--sp-2: 8px;
+	--sp-3: 12px;
+	--sp-4: 16px;
+	--sp-5: 24px;
+	--sp-6: 32px;
+	--sp-7: 48px;
+	--sp-8: 64px;
+	--sp-9: 96px;
+
+	/* --- Tracking / letter-spacing --- */
+	--track-tight: 0.02em;
+	--track-display: 0.06em;
+	--track-loose: 0.18em;
+	--track-extra: 0.28em;
+
+	/* --- Fonts --- */
+	--font-display: 'Exocet', 'Times New Roman', serif;
+	--font-body: 'Exocet', 'Times New Roman', serif;
+	--font-mono: ui-monospace, 'SF Mono', Menlo, Consolas, monospace;
+
+	/* --- Backwards-compatible aliases (keep old code working) --- */
+	--font-color: var(--bone);
+	--bg-color: var(--bg-page);
+	--link-color: var(--gold-base);
+	--font-main: 'Exocet';
+
+	/* --- Z-index scale --- */
+	--z-frame: 0;
+	--z-content: 1;
+	--z-overlay: 50;
+	--z-dialog: 100;
+	--z-toast: 200;
+}

@@ -102,12 +102,18 @@
 
 <div class="mnemonic-grid" onpaste={handlePaste} role="none">
 	{#each words as word, i (i)}
+		{@const valid = isValidWord(word)}
+		{@const filled = !!word}
 		<div
-			class="word-slot"
+			class="word-slot bevel-in"
 			class:focused={focusedIndex === i}
-			class:invalid={word && !isValidWord(word)}
+			class:invalid={filled && !valid}
+			class:valid-filled={filled && valid}
 		>
-			<span class="number">{i + 1}</span>
+			<span class="number small-caps">{(i + 1).toString().padStart(2, '0')}</span>
+			{#if filled && valid}
+				<span class="mark" aria-hidden="true">▸</span>
+			{/if}
 			<input
 				type="text"
 				bind:this={inputs[i]}
@@ -116,7 +122,7 @@
 				onkeydown={(e) => handleKeyDown(i, e)}
 				onfocus={() => (focusedIndex = i)}
 				onblur={() => (focusedIndex = -1)}
-				placeholder="..."
+				placeholder="—"
 				autocomplete="off"
 				spellcheck="false"
 			/>
@@ -128,50 +134,114 @@
 	.mnemonic-grid {
 		display: grid;
 		grid-template-columns: repeat(3, 1fr);
-		gap: 0.8rem;
-		margin: 1.5rem 0;
+		gap: 0.6rem;
+		padding: 1rem 0;
 	}
 
 	.word-slot {
+		position: relative;
 		display: flex;
 		align-items: center;
-		background: #141415;
-		border: 1px solid #28251e;
-		padding: 0.8rem;
-		border-radius: 6px;
-		transition: all 0.2s ease;
+		min-height: 52px;
+		padding: 0 0.75rem 0 2.4rem;
+		border-radius: 0;
+		border: 1px solid var(--stone-5);
+		background: linear-gradient(180deg, var(--stone-1) 0%, var(--stone-2) 100%);
+		box-shadow:
+			inset 0 1px 0 rgba(0, 0, 0, 0.85),
+			inset 1px 0 0 rgba(0, 0, 0, 0.55),
+			inset 0 -1px 0 rgba(227, 188, 116, 0.06),
+			inset -1px 0 0 rgba(227, 188, 116, 0.04);
+		transition:
+			border-color 140ms ease,
+			box-shadow 180ms ease,
+			background 200ms ease;
+	}
+
+	.word-slot.valid-filled {
+		box-shadow:
+			inset 0 1px 0 rgba(0, 0, 0, 0.85),
+			inset 1px 0 0 rgba(0, 0, 0, 0.55),
+			inset 0 -1px 0 rgba(227, 188, 116, 0.08),
+			inset -1px 0 0 rgba(227, 188, 116, 0.05),
+			inset 0 0 12px rgba(227, 188, 116, 0.06);
 	}
 
 	.word-slot.focused {
-		border-color: #e3bc74;
-		box-shadow: 0 0 10px rgba(227, 188, 116, 0.15);
+		border: 1px solid var(--gold-base);
+		box-shadow:
+			0 0 0 1px var(--gold-faint),
+			0 0 18px rgba(227, 188, 116, 0.18),
+			inset 0 1px 0 rgba(0, 0, 0, 0.85),
+			inset 0 0 14px rgba(227, 188, 116, 0.08);
 	}
 
 	.word-slot.invalid {
-		border-color: #993333;
-		box-shadow: 0 0 10px rgba(153, 51, 51, 0.15);
+		border: 1px solid var(--blood);
+		box-shadow:
+			0 0 0 1px rgba(181, 54, 54, 0.28),
+			0 0 16px rgba(181, 54, 54, 0.28),
+			inset 0 1px 0 rgba(0, 0, 0, 0.85),
+			inset 0 0 12px rgba(181, 54, 54, 0.1);
 	}
 
 	.number {
-		font-family: ui-monospace, monospace;
+		position: absolute;
+		top: 0.3rem;
+		left: 0.5rem;
+		font-family: var(--font-display);
+		font-feature-settings:
+			'smcp' 1,
+			'c2sc' 1;
+		font-size: 0.62rem;
+		letter-spacing: var(--track-loose);
+		color: var(--gold-muted);
+		text-transform: uppercase;
+		user-select: none;
+		pointer-events: none;
+		text-shadow: 0 1px 0 rgba(0, 0, 0, 0.85);
+	}
+
+	.mark {
+		position: absolute;
+		top: 0.3rem;
+		right: 0.55rem;
+		font-family: var(--font-mono);
 		font-size: 0.7rem;
-		color: #5c584a;
-		min-width: 1.5rem;
+		color: var(--gold-base);
+		text-shadow: 0 0 6px rgba(227, 188, 116, 0.45);
+		pointer-events: none;
 		user-select: none;
 	}
 
 	input {
+		flex: 1;
+		min-width: 0;
 		background: transparent;
-		color: #e4d8b8;
+		color: var(--bone);
 		border: none;
 		outline: none;
 		width: 100%;
-		font-family: ui-monospace, monospace;
-		font-size: 0.9rem;
-		letter-spacing: 0.05em;
+		font-family: var(--font-mono);
+		font-size: 0.92rem;
+		letter-spacing: 0.04em;
+		padding: 0;
 	}
 
 	input::placeholder {
-		color: #3d3930;
+		color: var(--stone-7);
+		opacity: 0.7;
+	}
+
+	input::selection {
+		background: rgba(227, 188, 116, 0.28);
+		color: var(--bone-bright);
+	}
+
+	@media (max-width: 540px) {
+		.mnemonic-grid {
+			grid-template-columns: repeat(2, 1fr);
+			gap: 0.5rem;
+		}
 	}
 </style>

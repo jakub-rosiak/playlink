@@ -2,6 +2,13 @@
 	import { onDestroy, onMount, tick } from 'svelte';
 	import type { PageData } from './$types';
 	import { createChatStore, type ChatMessage, type ChatStore } from '$lib/chatStore';
+	import InnerPanel from '$lib/components/chrome/InnerPanel.svelte';
+	import SectionTitle from '$lib/components/chrome/SectionTitle.svelte';
+	import OrnateButton from '$lib/components/chrome/OrnateButton.svelte';
+	import Sigil from '$lib/components/chrome/Sigil.svelte';
+	import PipMeter from '$lib/components/chrome/PipMeter.svelte';
+	import Crest from '$lib/components/chrome/Crest.svelte';
+	import { getHintsState } from '$lib/hintsContext.svelte';
 
 	let { data }: { data: PageData } = $props();
 
@@ -9,6 +16,16 @@
 	let messages = $state<ChatMessage[]>([]);
 	let input = $state('');
 	let scroller: HTMLDivElement | null = $state(null);
+
+	const hintsState = getHintsState();
+
+	$effect(() => {
+		hintsState?.set([
+			{ key: 'Enter', label: 'Transmit', tone: 'gold' },
+			{ key: '⇧Enter', label: 'Newline', tone: 'stone' },
+			{ key: 'Esc', label: 'Leave', tone: 'red' }
+		]);
+	});
 
 	onMount(() => {
 		const store = createChatStore(data.roomName, data.token);
@@ -39,6 +56,7 @@
 	}
 
 	function shortAddr(addr: string): string {
+		if (!addr) return '';
 		if (addr.length <= 10) return addr;
 		return `${addr.slice(0, 6)}…${addr.slice(-4)}`;
 	}
@@ -50,192 +68,536 @@
 			return '';
 		}
 	}
+
+	interface Member {
+		address: string;
+		username: string;
+		isMe: boolean;
+	}
+
+	const members = $derived.by<Member[]>(() => {
+		const seen = new Map<string, Member>();
+		const meKey = (data.address ?? '').toLowerCase();
+		if (meKey) {
+			seen.set(meKey, {
+				address: data.address,
+				username: data.username || shortAddr(data.address),
+				isMe: true
+			});
+		}
+		for (const m of messages) {
+			const k = (m.sender_address ?? '').toLowerCase();
+			if (!k || seen.has(k)) continue;
+			seen.set(k, {
+				address: m.sender_address,
+				username: m.sender_username || shortAddr(m.sender_address),
+				isMe: false
+			});
+		}
+		return Array.from(seen.values());
+	});
+
+	function isMine(addr: string): boolean {
+		return (addr ?? '').toLowerCase() === (data.address ?? '').toLowerCase();
+	}
 </script>
 
-<section class="page">
-	<header>
-		<a class="back" href="/rooms">← Rooms</a>
-		<div class="title">
-			<h1>{data.roomName}</h1>
-			{#if data.roomGame}<span class="game">{data.roomGame}</span>{/if}
-		</div>
-	</header>
+<svelte:head>
+	<title>PlayLink — {data.roomName}</title>
+</svelte:head>
 
-	<div class="chat" bind:this={scroller}>
-		{#if messages.length === 0}
-			<p class="empty">No messages yet. Say hi.</p>
-		{:else}
-			{#each messages as msg (msg.id)}
-				<article
-					class="msg"
-					class:mine={msg.sender_address.toLowerCase() === data.address.toLowerCase()}
-				>
-					<div class="meta">
-						<span class="user">{msg.sender_username || shortAddr(msg.sender_address)}</span>
-						<span class="time">{fmtTime(msg.created_at)}</span>
-					</div>
-					<div class="content">{msg.content}</div>
-				</article>
-			{/each}
-		{/if}
+<section class="room-page">
+	<div class="rail">
+		<InnerPanel padded={false}>
+			<div class="rail-inner">
+				<SectionTitle title="Party" size="small" tone="gold">
+					{members.length} / 8
+				</SectionTitle>
+
+				<ul class="member-list scroll-d2">
+					{#each members as m (m.address)}
+						<li class="member" class:is-me={m.isMe}>
+							<Sigil address={m.address} size={28} />
+							<div class="member-meta">
+								<span class="member-name small-caps" class:is-me-name={m.isMe}>
+									{m.username}
+								</span>
+								<span class="member-addr">{shortAddr(m.address)}</span>
+							</div>
+							<span class="member-pip">
+								<PipMeter
+									value={m.isMe ? 3 : 2}
+									total={3}
+									tone={m.isMe ? 'good' : 'mid'}
+									size="sm"
+									glow={m.isMe}
+								/>
+							</span>
+						</li>
+					{/each}
+				</ul>
+			</div>
+		</InnerPanel>
 	</div>
 
-	<form
-		class="composer"
-		onsubmit={(e) => {
-			e.preventDefault();
-			send();
-		}}
-	>
-		<input
-			type="text"
-			placeholder="Message…"
-			bind:value={input}
-			onkeydown={onKey}
-			maxlength={1000}
-			autocomplete="off"
-		/>
-		<button type="submit" disabled={!input.trim()}>Send</button>
-	</form>
+	<div class="main">
+		<InnerPanel padded={false}>
+			<div class="main-inner">
+				<header class="room-head">
+					<div class="head-row top-row">
+						<a class="back small-caps" href="/rooms">◄ Rooms</a>
+						<div class="shard">
+							<span class="shard-label small-caps">Shard Hash</span>
+							<span class="shard-hash">{shortAddr(data.address)}</span>
+						</div>
+					</div>
+					<div class="head-row title-row">
+						<h1 class="room-title etched-gold small-caps">{data.roomName}</h1>
+						{#if data.roomGame}
+							<span class="game small-caps">
+								<span class="dot" aria-hidden="true">·</span>
+								Game · {data.roomGame}
+							</span>
+						{/if}
+					</div>
+					<span class="head-rule" aria-hidden="true"></span>
+				</header>
+
+				<div class="chat-wrap">
+					<div class="chat scroll-d2 bevel-in" bind:this={scroller}>
+						<div class="chat-noise" aria-hidden="true"></div>
+						{#if messages.length === 0}
+							<div class="empty">
+								<Crest size={56} tone="iron" />
+								<p>The void is silent. Speak first.</p>
+							</div>
+						{:else}
+							<ul class="msg-list">
+								{#each messages as msg (msg.id)}
+									{@const mine = isMine(msg.sender_address)}
+									<li class="msg-row" class:mine class:other={!mine}>
+										<article class="msg" class:mine class:other={!mine}>
+											<div class="msg-meta">
+												<span class="sender small-caps">
+													{mine ? 'You' : msg.sender_username || shortAddr(msg.sender_address)}
+												</span>
+												<span class="sep" aria-hidden="true">·</span>
+												<span class="addr">{shortAddr(msg.sender_address)}</span>
+												<span class="sep" aria-hidden="true">·</span>
+												<span class="time">{fmtTime(msg.created_at)}</span>
+											</div>
+											<div class="content">{msg.content}</div>
+										</article>
+									</li>
+								{/each}
+							</ul>
+						{/if}
+					</div>
+
+					<form
+						class="composer"
+						onsubmit={(e) => {
+							e.preventDefault();
+							send();
+						}}
+					>
+						<input
+							class="msg-input bevel-in"
+							type="text"
+							bind:value={input}
+							onkeydown={onKey}
+							placeholder="Speak…"
+							maxlength={1000}
+							autocomplete="off"
+						/>
+						<OrnateButton type="submit" variant="primary" size="md" disabled={!input.trim()}>
+							Transmit
+						</OrnateButton>
+					</form>
+				</div>
+			</div>
+		</InnerPanel>
+	</div>
 </section>
 
 <style>
-	.page {
-		max-width: 760px;
-		margin: 0 auto;
-		padding: 1.5rem 1rem;
-		display: flex;
-		flex-direction: column;
+	.room-page {
+		display: grid;
+		grid-template-columns: 240px 1fr;
 		gap: 1rem;
-		min-height: calc(100vh - 4rem);
-	}
-
-	header {
-		display: flex;
-		flex-direction: column;
-		gap: 0.5rem;
-	}
-
-	.back {
-		color: #e3bc74;
-		text-decoration: none;
-		font-size: 0.9rem;
-		opacity: 0.8;
-	}
-	.back:hover {
-		opacity: 1;
-	}
-
-	.title {
-		display: flex;
-		align-items: baseline;
-		gap: 0.75rem;
-	}
-
-	h1 {
-		margin: 0;
-		font-size: 1.6rem;
-		color: #f4ecd8;
-	}
-
-	.game {
-		color: #e3bc74;
-		font-size: 0.9rem;
-		opacity: 0.85;
-	}
-
-	.chat {
+		min-height: 0;
+		height: 100%;
 		flex: 1;
-		min-height: 50vh;
-		max-height: 65vh;
-		overflow-y: auto;
-		padding: 1rem;
-		background: rgba(255, 255, 255, 0.03);
-		border: 1px solid rgba(227, 188, 116, 0.2);
-		border-radius: 12px;
+		align-items: stretch;
+	}
+
+	.rail,
+	.main {
+		display: flex;
+		min-height: 0;
+		min-width: 0;
+	}
+
+	.rail-inner {
 		display: flex;
 		flex-direction: column;
 		gap: 0.6rem;
+		padding: 1rem 0.85rem;
+		min-height: 0;
+		flex: 1;
+	}
+
+	.member-list {
+		list-style: none;
+		margin: 0;
+		padding: 0;
+		display: flex;
+		flex-direction: column;
+		gap: 0;
+		overflow-y: auto;
+		min-height: 0;
+		flex: 1;
+	}
+
+	.member {
+		display: grid;
+		grid-template-columns: 28px 1fr auto;
+		align-items: center;
+		gap: 0.55rem;
+		padding: 0.5rem 0.45rem;
+		border-bottom: 1px solid var(--stone-5);
+		border-left: 2px solid transparent;
+		transition: background 140ms ease;
+	}
+
+	.member:hover {
+		background: rgba(227, 188, 116, 0.04);
+	}
+
+	.member.is-me {
+		border-left: 2px solid var(--gold-base);
+		background: rgba(227, 188, 116, 0.05);
+	}
+
+	.member-meta {
+		display: flex;
+		flex-direction: column;
+		gap: 1px;
+		min-width: 0;
+	}
+
+	.member-name {
+		font-family: var(--font-display);
+		font-size: 0.78rem;
+		color: var(--bone);
+		letter-spacing: var(--track-loose);
+		white-space: nowrap;
+		overflow: hidden;
+		text-overflow: ellipsis;
+	}
+
+	.member-name.is-me-name {
+		color: var(--bone-bright);
+		text-shadow: 0 0 10px rgba(241, 233, 205, 0.18);
+	}
+
+	.member-addr {
+		font-family: var(--font-mono);
+		font-size: 0.65rem;
+		color: var(--bone-dim);
+		letter-spacing: 0.04em;
+	}
+
+	.member-pip {
+		display: inline-flex;
+	}
+
+	/* --- Main column --- */
+
+	.main-inner {
+		display: flex;
+		flex-direction: column;
+		gap: 0.85rem;
+		padding: 1.1rem 1.2rem 1.2rem;
+		min-height: 0;
+		flex: 1;
+	}
+
+	.room-head {
+		display: flex;
+		flex-direction: column;
+		gap: 0.45rem;
+		position: relative;
+	}
+
+	.head-row {
+		display: flex;
+		align-items: baseline;
+		justify-content: space-between;
+		gap: 1rem;
+	}
+
+	.top-row {
+		font-size: 0.72rem;
+	}
+
+	.back {
+		font-family: var(--font-display);
+		color: var(--gold-base);
+		text-decoration: none;
+		letter-spacing: var(--track-loose);
+		font-size: 0.72rem;
+		padding: 0.15rem 0;
+		transition:
+			color 140ms ease,
+			text-shadow 140ms ease;
+	}
+	.back:hover {
+		color: var(--gold-lit);
+		text-shadow: 0 0 10px rgba(241, 207, 143, 0.45);
+	}
+
+	.shard {
+		display: inline-flex;
+		align-items: baseline;
+		gap: 0.5rem;
+		color: var(--bone-dim);
+	}
+
+	.shard-label {
+		font-family: var(--font-display);
+		font-size: 0.65rem;
+		color: var(--bone-dim);
+		letter-spacing: var(--track-loose);
+	}
+
+	.shard-hash {
+		font-family: var(--font-mono);
+		font-size: 0.72rem;
+		color: var(--bone-muted);
+		letter-spacing: 0.05em;
+	}
+
+	.title-row {
+		align-items: baseline;
+	}
+
+	.room-title {
+		margin: 0;
+		font-family: var(--font-display);
+		font-weight: 600;
+		font-size: 1.65rem;
+		letter-spacing: var(--track-loose);
+		line-height: 1.05;
+	}
+
+	.game {
+		font-family: var(--font-display);
+		font-size: 0.72rem;
+		color: var(--gold-base);
+		letter-spacing: var(--track-loose);
+		display: inline-flex;
+		gap: 0.35rem;
+		align-items: baseline;
+	}
+	.game .dot {
+		color: var(--gold-muted);
+		opacity: 0.6;
+	}
+
+	.head-rule {
+		display: block;
+		height: 1px;
+		width: 100%;
+		background: var(--hair-gold);
+		margin-top: 0.15rem;
+	}
+
+	/* --- Chat scroll area --- */
+
+	.chat-wrap {
+		display: flex;
+		flex-direction: column;
+		gap: 0.75rem;
+		flex: 1;
+		min-height: 0;
+	}
+
+	.chat {
+		position: relative;
+		flex: 1;
+		min-height: 240px;
+		overflow-y: auto;
+		padding: 1rem 1.05rem;
+		background: linear-gradient(180deg, var(--stone-2) 0%, var(--stone-1) 100%);
+	}
+
+	.chat-noise {
+		position: absolute;
+		inset: 0;
+		pointer-events: none;
+		background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='160' height='160'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='1.1' numOctaves='1' stitchTiles='stitch'/><feColorMatrix values='0 0 0 0 0  0 0 0 0 0  0 0 0 0 0  0 0 0 0.35 0'/></filter><rect width='100%' height='100%' filter='url(%23n)'/></svg>");
+		background-size: 160px 160px;
+		opacity: 0.12;
+		mix-blend-mode: overlay;
+		z-index: 0;
 	}
 
 	.empty {
-		margin: auto;
-		color: rgba(244, 236, 216, 0.5);
+		position: relative;
+		z-index: 1;
+		height: 100%;
+		min-height: 200px;
+		display: flex;
+		flex-direction: column;
+		align-items: center;
+		justify-content: center;
+		gap: 0.6rem;
+		color: var(--bone-muted);
+	}
+	.empty p {
+		margin: 0;
+		font-family: var(--font-display);
 		font-style: italic;
+		font-size: 0.95rem;
+		letter-spacing: 0.02em;
+	}
+
+	.msg-list {
+		position: relative;
+		z-index: 1;
+		list-style: none;
+		margin: 0;
+		padding: 0;
+		display: flex;
+		flex-direction: column;
+		gap: 0;
+	}
+
+	.msg-row {
+		padding: 0.45rem 0;
+		border-bottom: 1px solid var(--stone-5);
+	}
+	.msg-row:last-child {
+		border-bottom: 0;
 	}
 
 	.msg {
-		display: flex;
-		flex-direction: column;
-		gap: 0.15rem;
-		max-width: 85%;
-		padding: 0.5rem 0.75rem;
-		background: rgba(0, 0, 0, 0.25);
-		border-left: 2px solid rgba(227, 188, 116, 0.4);
-		border-radius: 6px;
+		padding: 0.4rem 0.7rem;
+		background: transparent;
+		border-radius: 0;
+		max-width: 100%;
+		transition:
+			background 160ms ease,
+			box-shadow 160ms ease;
+	}
+
+	.msg.other {
+		border-left: 2px solid var(--gold-muted);
 	}
 
 	.msg.mine {
-		align-self: flex-end;
-		border-left: none;
-		border-right: 2px solid #e3bc74;
-		background: rgba(227, 188, 116, 0.08);
+		border-right: 2px solid var(--gold-base);
+		background: var(--gold-faint);
+		text-align: right;
+	}
+	.msg.mine:hover {
+		box-shadow: inset 0 0 18px rgba(227, 188, 116, 0.14);
 	}
 
-	.meta {
-		display: flex;
-		gap: 0.5rem;
-		font-size: 0.75rem;
-		opacity: 0.7;
+	.msg-meta {
+		display: inline-flex;
+		flex-wrap: wrap;
+		align-items: baseline;
+		gap: 0.4rem;
+		font-size: 0.65rem;
+		line-height: 1.2;
+		margin-bottom: 0.2rem;
 	}
 
-	.user {
-		color: #e3bc74;
-		font-weight: 600;
+	.msg.mine .msg-meta {
+		justify-content: flex-end;
+		width: 100%;
 	}
 
+	.sender {
+		font-family: var(--font-display);
+		color: var(--bone-bright);
+		font-size: 0.72rem;
+		letter-spacing: var(--track-loose);
+	}
+
+	.sep {
+		color: var(--bone-dim);
+		opacity: 0.6;
+	}
+
+	.addr,
 	.time {
-		color: rgba(244, 236, 216, 0.5);
+		font-family: var(--font-mono);
+		color: var(--bone-dim);
+		font-size: 0.65rem;
+		letter-spacing: 0.04em;
 	}
 
 	.content {
-		color: #f4ecd8;
+		font-family: var(--font-display);
+		color: var(--bone);
+		font-size: 0.92rem;
+		line-height: 1.45;
 		word-wrap: break-word;
 		white-space: pre-wrap;
+		font-weight: 400;
 	}
+
+	.msg.mine .content {
+		color: var(--bone-bright);
+	}
+
+	/* --- Composer --- */
 
 	.composer {
 		display: flex;
-		gap: 0.5rem;
+		gap: 0.6rem;
+		align-items: stretch;
+		position: sticky;
+		bottom: 0;
 	}
 
-	.composer input {
+	.msg-input {
 		flex: 1;
-		padding: 0.65rem 0.9rem;
-		background: rgba(255, 255, 255, 0.05);
-		border: 1px solid rgba(227, 188, 116, 0.3);
-		border-radius: 8px;
-		color: #f4ecd8;
-		font-size: 0.95rem;
-	}
-
-	.composer input:focus {
+		padding: 0.65rem 0.85rem;
+		font-family: var(--font-display);
+		font-size: 0.92rem;
+		color: var(--bone-bright);
+		border-radius: 0;
 		outline: none;
-		border-color: #e3bc74;
+		letter-spacing: 0.02em;
+		transition:
+			border-color 140ms ease,
+			box-shadow 140ms ease;
 	}
 
-	.composer button {
-		padding: 0.65rem 1.2rem;
-		background: #e3bc74;
-		color: #0d0d0d;
-		border: none;
-		border-radius: 8px;
-		font-weight: 600;
-		cursor: pointer;
+	.msg-input::placeholder {
+		color: var(--bone-dim);
+		font-style: italic;
+		letter-spacing: 0.02em;
 	}
 
-	.composer button:disabled {
-		opacity: 0.4;
-		cursor: not-allowed;
+	.msg-input:focus {
+		border-color: var(--gold-muted);
+		box-shadow:
+			var(--bevel-in),
+			0 0 0 1px var(--gold-muted),
+			0 0 14px rgba(227, 188, 116, 0.18);
+	}
+
+	@media (max-width: 760px) {
+		.room-page {
+			grid-template-columns: 1fr;
+		}
+		.rail {
+			max-height: 200px;
+		}
 	}
 </style>

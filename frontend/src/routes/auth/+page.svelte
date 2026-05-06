@@ -1,9 +1,14 @@
 <script lang="ts">
 	import { generateMnemonic, authenticate } from '$lib/auth';
 	import MnemonicInput from '$lib/components/MnemonicInput.svelte';
-	import { enhance } from '$app/forms';
-	import { deserialize } from '$app/forms';
+	import { enhance, deserialize } from '$app/forms';
 	import { invalidateAll } from '$app/navigation';
+	import InnerPanel from '$lib/components/chrome/InnerPanel.svelte';
+	import SectionTitle from '$lib/components/chrome/SectionTitle.svelte';
+	import OrnateButton from '$lib/components/chrome/OrnateButton.svelte';
+	import Sigil from '$lib/components/chrome/Sigil.svelte';
+	import SystemDialog from '$lib/components/chrome/SystemDialog.svelte';
+	import { getHintsState } from '$lib/hintsContext.svelte';
 	import type { PageProps } from './$types';
 
 	let { data }: PageProps = $props();
@@ -11,13 +16,35 @@
 	let mnemonic = $state('');
 	let loading = $state(false);
 	let error = $state('');
+	let copyStatus = $state<'idle' | 'ok' | 'fail'>('idle');
+	let addressCopyStatus = $state<'idle' | 'ok' | 'fail'>('idle');
+	let errorOpen = $state(false);
+
+	const hintsState = getHintsState();
+
+	$effect(() => {
+		if (data.user) {
+			hintsState?.set([
+				{ key: 'L', label: 'Sever Covenant', tone: 'red' },
+				{ key: 'C', label: 'Copy Address', tone: 'gold' }
+			]);
+		} else {
+			hintsState?.set([
+				{ key: 'G', label: 'Generate', tone: 'green' },
+				{ key: 'C', label: 'Copy Phrase', tone: 'amber' },
+				{ key: 'Enter', label: 'Confirm', tone: 'gold' }
+			]);
+		}
+	});
+
+	$effect(() => {
+		errorOpen = !!error;
+	});
 
 	function handleGenerate() {
 		mnemonic = generateMnemonic();
 		error = '';
 	}
-
-	let copyStatus = $state<'idle' | 'ok' | 'fail'>('idle');
 
 	async function handleCopy() {
 		if (!mnemonic) return;
@@ -45,6 +72,30 @@
 		setTimeout(() => (copyStatus = 'idle'), 1500);
 	}
 
+	async function handleCopyAddress() {
+		if (!data.user?.address) return;
+		try {
+			if (navigator.clipboard?.writeText) {
+				await navigator.clipboard.writeText(data.user.address);
+			} else {
+				const ta = document.createElement('textarea');
+				ta.value = data.user.address;
+				ta.style.position = 'fixed';
+				ta.style.opacity = '0';
+				document.body.appendChild(ta);
+				ta.focus();
+				ta.select();
+				const ok = document.execCommand('copy');
+				document.body.removeChild(ta);
+				if (!ok) throw new Error('execCommand failed');
+			}
+			addressCopyStatus = 'ok';
+		} catch {
+			addressCopyStatus = 'fail';
+		}
+		setTimeout(() => (addressCopyStatus = 'idle'), 1500);
+	}
+
 	async function startAuth() {
 		loading = true;
 		error = '';
@@ -69,176 +120,406 @@
 			loading = false;
 		}
 	}
+
+	let logoutForm: HTMLFormElement | null = $state(null);
+
+	function handleKeydown(e: KeyboardEvent) {
+		const target = e.target as HTMLElement | null;
+		const tag = target?.tagName?.toLowerCase();
+		if (tag === 'input' || tag === 'textarea' || tag === 'select') return;
+
+		if (data.user) {
+			if (e.key === 'l' || e.key === 'L') {
+				e.preventDefault();
+				logoutForm?.requestSubmit();
+			} else if (e.key === 'c' || e.key === 'C') {
+				e.preventDefault();
+				handleCopyAddress();
+			}
+		} else {
+			if (e.key === 'g' || e.key === 'G') {
+				e.preventDefault();
+				if (!loading) handleGenerate();
+			} else if (e.key === 'c' || e.key === 'C') {
+				e.preventDefault();
+				handleCopy();
+			} else if (e.key === 'Enter') {
+				if (!loading && mnemonic && mnemonic.split(' ').length === 12) {
+					e.preventDefault();
+					startAuth();
+				}
+			}
+		}
+	}
 </script>
 
-<div class="auth-page">
-	<h1>Identity Management</h1>
+<svelte:window onkeydown={handleKeydown} />
 
+<svelte:head>
+	<title>PlayLink — Vault Keeper</title>
+</svelte:head>
+
+<div class="auth-page anim-content-in">
 	{#if data.user}
-		<div class="session-box">
-			<h3>Active Session</h3>
-			<p><strong>Status:</strong> Authenticated</p>
-			<p><strong>Username:</strong> <code>{data.user.username}</code></p>
-			<p><strong>JWT:</strong> <code class="jwt">{data.jwt}</code></p>
+		<InnerPanel title="Active Covenant">
+			<div class="covenant">
+				<div class="covenant-head">
+					<div class="sigil-halo">
+						<Sigil address={data.user.address} size={88} />
+					</div>
+					<div class="identity">
+						<h2 class="username etched-gold">{data.user.username}</h2>
+						<div class="address-row">
+							<code class="address mono">{data.user.address}</code>
+						</div>
+					</div>
+				</div>
 
-			<form
-				method="POST"
-				action="?/logout"
-				use:enhance={() => {
-					return async ({ update }) => {
-						await update();
-						await invalidateAll();
-					};
-				}}
-			>
-				<button class="logout-btn" type="submit">Log Out / Clear Session</button>
-			</form>
-		</div>
-	{:else}
-		<p>Access your non-custodial profile using your recovery phrase.</p>
+				<span class="hairline-gold"></span>
 
-		<div class="auth-container">
-			<div class="auth-header">
-				<h3>Sign In / Register</h3>
-				<div>
-					<button onclick={handleCopy} disabled={!mnemonic}>
-						{copyStatus === 'ok'
-							? 'Copied ✓'
-							: copyStatus === 'fail'
+				<div class="meta-grid">
+					<SectionTitle title="Status" size="small" tone="gold" />
+					<p class="meta-line">
+						<span class="dot good" aria-hidden="true"></span>
+						<span class="meta-text">Bonded · session valid</span>
+					</p>
+
+					<SectionTitle title="Warden" size="small" tone="gold" />
+					<p class="meta-line">
+						<span class="meta-text">PlayLink v0.1</span>
+					</p>
+				</div>
+
+				<span class="hairline-gold"></span>
+
+				<div class="jwt-block">
+					<SectionTitle title="JWT Token" size="small" tone="gold" />
+					<div class="jwt bevel-in scroll-d2">
+						<code class="mono jwt-text">{data.jwt}</code>
+					</div>
+				</div>
+
+				<div class="action-row">
+					<OrnateButton variant="secondary" size="md" onclick={handleCopyAddress}>
+						{addressCopyStatus === 'ok'
+							? 'Address Copied'
+							: addressCopyStatus === 'fail'
 								? 'Copy Failed'
-								: 'Copy Phrase'}
-					</button>
-					<button onclick={handleGenerate} disabled={loading}> Generate New Phrase </button>
+								: 'Copy Address'}
+					</OrnateButton>
+
+					<form
+						bind:this={logoutForm}
+						method="POST"
+						action="?/logout"
+						class="logout-form"
+						use:enhance={() => {
+							return async ({ update }) => {
+								await update();
+								await invalidateAll();
+							};
+						}}
+					>
+						<OrnateButton variant="danger" size="md" type="submit">
+							Sever Covenant
+						</OrnateButton>
+					</form>
 				</div>
 			</div>
+		</InnerPanel>
+	{:else}
+		<InnerPanel title="Vault Keeper">
+			<div class="vault">
+				<div class="vault-head">
+					<p class="prose">
+						Access your non-custodial profile using your recovery phrase.
+						Twelve words bind you to your covenant — guard them.
+					</p>
+					<div class="head-actions">
+						<OrnateButton variant="secondary" size="sm" onclick={handleGenerate} disabled={loading}>
+							Generate New Phrase
+						</OrnateButton>
+						<OrnateButton variant="ghost" size="sm" onclick={handleCopy} disabled={!mnemonic}>
+							{copyStatus === 'ok'
+								? 'Copied ✓'
+								: copyStatus === 'fail'
+									? 'Copy Failed'
+									: 'Copy Phrase'}
+						</OrnateButton>
+					</div>
+				</div>
 
-			<MnemonicInput bind:value={mnemonic} />
+				<span class="hairline-gold"></span>
 
-			<button
-				class="auth-btn"
-				onclick={startAuth}
-				disabled={loading || !mnemonic || mnemonic.split(' ').length !== 12}
-			>
-				{loading ? 'Authenticating...' : 'Confirm Identity'}
-			</button>
+				<div class="phrase-zone">
+					<SectionTitle title="Recovery Phrase" size="small" tone="gold">
+						<span class="phrase-counter">
+							{mnemonic ? mnemonic.split(' ').filter(Boolean).length : 0} / 12
+						</span>
+					</SectionTitle>
+					<MnemonicInput bind:value={mnemonic} />
+				</div>
 
-			{#if error}
-				<p class="error">{error}</p>
-			{/if}
-		</div>
+				{#if error}
+					<SystemDialog
+						bind:open={errorOpen}
+						title="Authentication Failed"
+						tone="blood"
+						inline
+						closeable
+						onclose={() => (error = '')}
+					>
+						<p class="error-body">{error}</p>
+					</SystemDialog>
+				{/if}
+
+				<span class="hairline-gold"></span>
+
+				<div class="confirm-row">
+					<OrnateButton
+						variant="primary"
+						size="lg"
+						fullWidth
+						onclick={startAuth}
+						disabled={loading || !mnemonic || mnemonic.split(' ').length !== 12}
+						loading={loading}
+					>
+						{loading ? 'Authenticating…' : 'Confirm Identity'}
+					</OrnateButton>
+				</div>
+			</div>
+		</InnerPanel>
 	{/if}
 </div>
 
 <style>
-	h1,
-	h3 {
-		font-family: 'Exocet', serif;
-		color: #f1e9cd;
-		text-transform: uppercase;
-		font-weight: normal;
-	}
-
 	.auth-page {
-		max-width: 800px;
+		max-width: 760px;
 		margin: 2rem auto;
-		padding: 2.5rem;
-		background: #111111;
-		border: 1px solid #23201a;
-		border-radius: 12px;
-		box-shadow:
-			inset 0 0 40px rgba(0, 0, 0, 0.5),
-			0 10px 40px rgba(0, 0, 0, 0.8);
-		color: #8c877a;
+		padding: 0 1rem;
 	}
 
-	.auth-header {
-		display: flex;
-		justify-content: space-between;
-		align-items: center;
-		margin-bottom: 2rem;
+	.etched-gold {
+		font-family: var(--font-display);
+		font-weight: normal;
+		color: var(--bone-bright);
+		text-shadow:
+			0 0 14px rgba(227, 188, 116, 0.16),
+			0 1px 0 rgba(0, 0, 0, 0.85);
 	}
 
-	.session-box,
-	.auth-container {
-		margin-top: 1.5rem;
-		padding: 2rem;
-		border: 1px solid #28251e;
-		background: #0a0a0b;
-		border-radius: 8px;
+	.mono {
+		font-family: var(--font-mono);
 	}
 
-	strong {
-		color: #a39c8c;
-		font-family: ui-monospace, monospace;
-		font-size: 0.8rem;
-		text-transform: uppercase;
-		letter-spacing: 0.1em;
-	}
-
-	code {
+	.hairline-gold {
 		display: block;
-		word-break: break-all;
-		background: #141415;
-		color: #e3bc74;
-		padding: 0.8rem;
-		margin: 0.5rem 0 1.5rem 0;
-		border-radius: 4px;
-		border: 1px solid #28251e;
-		font-family: ui-monospace, monospace;
-		font-size: 0.8rem;
-	}
-
-	button {
-		font-family: ui-monospace, SFMono-Regular, monospace;
-		font-size: 0.75rem;
-		letter-spacing: 0.15em;
-		padding: 0.8rem 1.5rem;
-		border-radius: 6px;
-		cursor: pointer;
-		text-transform: uppercase;
-		transition: all 0.2s;
-		background: transparent;
-		color: #a39c8c;
-		border: 1px solid #3d3930;
-	}
-
-	button:hover:not(:disabled) {
-		border-color: #e3bc74;
-		color: #e3bc74;
-	}
-
-	button:disabled {
-		opacity: 0.5;
-		cursor: not-allowed;
-	}
-
-	.auth-btn,
-	.logout-btn {
-		background: #e3bc74;
-		color: #1a1405;
-		border: none;
-		box-shadow: 0 0 15px rgba(227, 188, 116, 0.3);
-		font-weight: bold;
-		margin-top: 1rem;
+		height: 1px;
 		width: 100%;
+		background: var(--hair-gold);
+		border: 0;
+		margin: 1.25rem 0;
 	}
 
-	.auth-btn:hover:not(:disabled),
-	.logout-btn:hover {
-		background: #f1cf8f;
-		box-shadow: 0 0 25px rgba(227, 188, 116, 0.5);
-		border-color: #f1cf8f;
-		color: #1a1405;
+	/* ---------- Active covenant ---------- */
+	.covenant {
+		display: flex;
+		flex-direction: column;
 	}
 
-	.error {
-		color: #ff6b6b;
-		margin-top: 1rem;
-		font-size: 0.9rem;
+	.covenant-head {
+		display: flex;
+		gap: 1.4rem;
+		align-items: center;
+	}
+
+	.sigil-halo {
+		filter: drop-shadow(0 0 14px rgba(227, 188, 116, 0.28));
+		flex-shrink: 0;
+	}
+
+	.identity {
+		display: flex;
+		flex-direction: column;
+		gap: 0.4rem;
+		min-width: 0;
+		flex: 1;
+	}
+
+	.username {
+		margin: 0;
+		font-size: 1.9rem;
+		letter-spacing: var(--track-display);
+		text-transform: uppercase;
+		color: var(--bone-bright);
+		line-height: 1.05;
+		word-break: break-word;
+	}
+
+	.address-row {
+		display: flex;
+		align-items: center;
+		gap: 0.75rem;
+		min-width: 0;
+	}
+
+	.address {
+		display: inline-block;
+		font-size: 0.78rem;
+		color: var(--bone-muted);
+		letter-spacing: 0.04em;
+		word-break: break-all;
+		white-space: normal;
+	}
+
+	.meta-grid {
+		display: grid;
+		grid-template-columns: 140px 1fr;
+		gap: 0.6rem 1.5rem;
+		align-items: baseline;
+	}
+
+	.meta-line {
+		margin: 0;
+		display: flex;
+		align-items: center;
+		gap: 0.6rem;
+		font-family: var(--font-mono);
+		font-size: 0.82rem;
+		color: var(--bone);
+	}
+
+	.dot {
+		display: inline-block;
+		width: 8px;
+		height: 8px;
+		background: var(--bone-dim);
+		box-shadow: 0 0 6px rgba(0, 0, 0, 0.6);
+	}
+	.dot.good {
+		background: var(--pip-good);
+		box-shadow: 0 0 8px rgba(127, 191, 92, 0.55);
+	}
+
+	.meta-text {
+		letter-spacing: 0.04em;
+	}
+
+	.jwt-block {
+		display: flex;
+		flex-direction: column;
+		gap: 0.5rem;
 	}
 
 	.jwt {
 		max-height: 100px;
 		overflow-y: auto;
+		padding: 0.75rem 0.9rem;
+	}
+
+	.jwt-text {
+		display: block;
+		color: var(--gold-muted);
+		font-size: 0.78rem;
+		line-height: 1.5;
+		word-break: break-all;
+		white-space: pre-wrap;
+	}
+
+	.action-row {
+		display: flex;
+		gap: 0.9rem;
+		margin-top: 1.4rem;
+		flex-wrap: wrap;
+	}
+
+	.action-row :global(.ornate) {
+		flex: 1;
+	}
+
+	.logout-form {
+		flex: 1;
+		display: flex;
+	}
+
+	.logout-form :global(.ornate) {
+		flex: 1;
+		width: 100%;
+	}
+
+	/* ---------- Vault keeper (login) ---------- */
+	.vault {
+		display: flex;
+		flex-direction: column;
+	}
+
+	.vault-head {
+		display: flex;
+		justify-content: space-between;
+		align-items: flex-start;
+		gap: 1.5rem;
+		flex-wrap: wrap;
+	}
+
+	.prose {
+		margin: 0;
+		flex: 1;
+		min-width: 220px;
+		max-width: 360px;
+		font-family: var(--font-display);
+		color: var(--bone-muted);
+		font-size: 0.95rem;
+		line-height: 1.55;
+		letter-spacing: 0.02em;
+	}
+
+	.head-actions {
+		display: flex;
+		gap: 0.6rem;
+		flex-shrink: 0;
+		flex-wrap: wrap;
+	}
+
+	.phrase-zone {
+		display: flex;
+		flex-direction: column;
+	}
+
+	.phrase-counter {
+		color: var(--gold-muted);
+	}
+
+	.error-body {
+		margin: 0;
+		font-family: var(--font-mono);
+		font-size: 0.85rem;
+		color: var(--blood-bright);
+		line-height: 1.45;
+		word-break: break-word;
+	}
+
+	.confirm-row {
+		display: flex;
+	}
+
+	.confirm-row :global(.ornate) {
+		width: 100%;
+	}
+
+	@media (max-width: 540px) {
+		.covenant-head {
+			flex-direction: column;
+			align-items: flex-start;
+		}
+		.meta-grid {
+			grid-template-columns: 1fr;
+			gap: 0.3rem;
+		}
+		.action-row {
+			flex-direction: column;
+		}
+		.vault-head {
+			flex-direction: column;
+		}
 	}
 </style>

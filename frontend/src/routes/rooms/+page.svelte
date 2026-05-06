@@ -677,7 +677,8 @@
 		margin-top: 1rem;
 	}
 
-	.card-actions form {
+	.card-actions form,
+	.card-actions > .card-btn.open {
 		flex: 1;
 	}
 

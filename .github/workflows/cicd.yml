@@ -110,6 +110,7 @@ jobs:
                       JWT_ALGORITHM=${{ vars.JWT_ALGORITHM }}
                       NONCE_EXPIRATION_MINUTES=${{ vars.NONCE_EXPIRATION_MINUTES }}
                       JWT_EXPIRATION_MINUTES=${{ vars.JWT_EXPIRATION_MINUTES }}
+                      ORIGIN=https://playlink.bartek.monster
                       EOF
 
                       cat > frontend/.env << EOF

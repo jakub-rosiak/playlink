@@ -1,18 +1,28 @@
-# Playlink - Moduł Sumatywny
+# Playlink — Moduł Sumatywny
 
-Playlink is a full-stack application providing secure, non-custodial identity management. The system is built with a FastAPI backend, a SvelteKit frontend, and a PostgreSQL database, orchestrated via Docker Compose.
+Playlink is a full-stack **LFG (Looking For Group)** web application for finding players for niche, retro, and less popular multiplayer titles. Users create short-lived game sessions ("rooms") and browse open lobbies in real time. Authentication is non-custodial: identity is derived locally from a BIP39 mnemonic and verified against the backend with an ECDSA signature.
+
+The system is built with a FastAPI backend, a SvelteKit frontend, and a PostgreSQL database, orchestrated via Docker Compose.
 
 **Project Kanban:** [GitHub Project Board](https://github.com/orgs/ioad-modul-sumatywny-26/projects/2)
 
 ## Access
 
-Frontend and backend are available at:  
-[frontend](https://playlink.bartek.monster/)
-[backend documentation](https://playlink-backend.bartek.monster/docs)
+Frontend and backend are available at:
+
+- [Frontend](https://playlink.bartek.monster/)
+- [Backend documentation](https://playlink-backend.bartek.monster/docs)
 
 ## Deployment
 
-Changes merged into the `main` branch are automatically deployed. The deployment process typically takes between 30 seconds and 5 minutes to complete, depending on the scope and complexity of the changes..
+Changes merged into the `main` branch are automatically deployed. The deployment process typically takes between 30 seconds and 5 minutes to complete, depending on the scope and complexity of the changes.
+
+## Features
+
+- **Identity authentication** — BIP39 mnemonic + ECDSA signature challenge, JWT session.
+- **Rooms** — create, list, join, and leave game sessions through REST endpoints.
+- **Realtime room list** — WebSocket broadcast pushes the current room list to all connected clients on every change.
+- **Game catalog** — pre-seeded list of supported games (Quake III Arena, Diablo II, StarCraft, Half-Life, Unreal Tournament).
 
 ## Technical Architecture
 
@@ -22,6 +32,8 @@ Changes merged into the `main` branch are automatically deployed. The deployment
 | Backend        | FastAPI (Python)       | uv         |
 | Database       | PostgreSQL 18          | Docker     |
 | ORM            | SQLModel               | —          |
+| Migrations     | Alembic                | uv         |
+| Realtime       | WebSockets (FastAPI)   | —          |
 | Authentication | BIP39 Identity / ECDSA | ethers.js  |
 | Git Hooks      | prek                   | uv         |
 
@@ -34,11 +46,30 @@ The application utilizes a non-custodial challenge-response mechanism based on B
 3. **Cryptographic Proof:** The client signs the challenge using the derived private key.
 4. **Session Verification:** The backend verifies the signature against the nonce and issues a JSON Web Token (JWT).
 
-Detailed specifications are available in `backend/docs/auth-flow.md`.
+Detailed specifications are available in [`backend/docs/auth-flow.md`](backend/docs/auth-flow.md).
+
+## Local Development
+
+The fastest way to run the full stack locally:
+
+```bash
+cp .env.example .env
+cp frontend/.env.example frontend/.env
+docker compose up --build
+```
+
+Services:
+
+- Frontend — `http://localhost:3000`
+- Backend (OpenAPI docs at `/docs`) — `http://localhost:8000`
+- PostgreSQL — `localhost:5432`
+
+For running each service outside Docker, see [`backend/README.md`](backend/README.md) and [`frontend/README.md`](frontend/README.md).
 
 ## Project Organization
 
-- `backend/`: API services, database models, and authentication logic.
-- `frontend/`: SvelteKit application and identity management UI.
-- `prezentacje/`: Project documentation and presentation materials.
-- `docker-compose.yml`: Multi-container orchestration configuration.
+- `backend/` — FastAPI service, SQLModel schemas, Alembic migrations, authentication and rooms logic.
+- `frontend/` — SvelteKit application and identity management UI.
+- `prezentacje/` — Project documentation and presentation materials.
+- `docker-compose.yml` — Multi-container orchestration configuration.
+- `CONTRIBUTING.md` — Workflow, branching, and quality standards.

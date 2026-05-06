@@ -1,6 +1,7 @@
 <script lang="ts">
 	import { generateMnemonic, authenticate } from '$lib/auth';
 	import MnemonicInput from '$lib/components/MnemonicInput.svelte';
+	import { enhance } from '$app/forms';
 	import { deserialize } from '$app/forms';
 	import { invalidateAll } from '$app/navigation';
 	import type { PageProps } from './$types';
@@ -16,10 +17,32 @@
 		error = '';
 	}
 
-	function handleCopy() {
-		if (mnemonic) {
-			navigator.clipboard.writeText(mnemonic);
+	let copyStatus = $state<'idle' | 'ok' | 'fail'>('idle');
+
+	async function handleCopy() {
+		if (!mnemonic) return;
+		try {
+			if (navigator.clipboard?.writeText) {
+				await navigator.clipboard.writeText(mnemonic);
+			} else {
+				// HTTP context blocks the async Clipboard API; fall back to the
+				// legacy textarea+execCommand path which still works there.
+				const ta = document.createElement('textarea');
+				ta.value = mnemonic;
+				ta.style.position = 'fixed';
+				ta.style.opacity = '0';
+				document.body.appendChild(ta);
+				ta.focus();
+				ta.select();
+				const ok = document.execCommand('copy');
+				document.body.removeChild(ta);
+				if (!ok) throw new Error('execCommand failed');
+			}
+			copyStatus = 'ok';
+		} catch {
+			copyStatus = 'fail';
 		}
+		setTimeout(() => (copyStatus = 'idle'), 1500);
 	}
 
 	async function startAuth() {
@@ -46,14 +69,6 @@
 			loading = false;
 		}
 	}
-
-	async function handleLogout() {
-		const response = await fetch('?/logout', { method: 'POST', body: new FormData() });
-		const actionResult = deserialize(await response.text());
-		if (actionResult.type === 'success') {
-			await invalidateAll();
-		}
-	}
 </script>
 
 <div class="auth-page">
@@ -64,10 +79,20 @@
 			<h3>Active Session</h3>
 			<p><strong>Status:</strong> Authenticated</p>
 			<p><strong>Username:</strong> <code>{data.user.username}</code></p>
-			<p><strong>Identity Address:</strong> <code>{data.user.address}</code></p>
 			<p><strong>JWT:</strong> <code class="jwt">{data.jwt}</code></p>
 
-			<button class="logout-btn" onclick={handleLogout}>Log Out / Clear Session</button>
+			<form
+				method="POST"
+				action="?/logout"
+				use:enhance={() => {
+					return async ({ update }) => {
+						await update();
+						await invalidateAll();
+					};
+				}}
+			>
+				<button class="logout-btn" type="submit">Log Out / Clear Session</button>
+			</form>
 		</div>
 	{:else}
 		<p>Access your non-custodial profile using your recovery phrase.</p>
@@ -76,7 +101,13 @@
 			<div class="auth-header">
 				<h3>Sign In / Register</h3>
 				<div>
-					<button onclick={handleCopy} disabled={!mnemonic}>Copy Phrase</button>
+					<button onclick={handleCopy} disabled={!mnemonic}>
+						{copyStatus === 'ok'
+							? 'Copied ✓'
+							: copyStatus === 'fail'
+								? 'Copy Failed'
+								: 'Copy Phrase'}
+					</button>
 					<button onclick={handleGenerate} disabled={loading}> Generate New Phrase </button>
 				</div>
 			</div>

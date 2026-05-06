@@ -15,7 +15,7 @@ if env_path.exists():
 # Import models so Alembic can see the metadata
 from sqlmodel import SQLModel  # noqa: E402
 
-from models import Game, Nonce, Room, User  # noqa: F401, E402
+from models import Game, Message, Nonce, Room, User  # noqa: F401, E402
 
 config = context.config
 

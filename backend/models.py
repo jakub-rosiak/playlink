@@ -18,10 +18,18 @@ class Room(SQLModel, table=True):
     created_by: str = Field(index=True)  # identity_address of creator
     created_at: datetime = Field(default_factory=lambda: datetime.now(UTC))
     expires_at: datetime = Field(
-        default_factory=lambda: datetime.now(UTC) + timedelta(minutes=1)
+        default_factory=lambda: datetime.now(UTC) + timedelta(minutes=60)
     )
 
     members: list[User] = Relationship(back_populates="rooms", link_model=RoomMember)
+
+
+class Message(SQLModel, table=True):
+    id: int | None = Field(default=None, primary_key=True)
+    room_id: int = Field(foreign_key="room.id", index=True)
+    sender_address: str = Field(index=True)
+    content: str
+    created_at: datetime = Field(default_factory=lambda: datetime.now(UTC), index=True)
 
 
 class Game(SQLModel, table=True):

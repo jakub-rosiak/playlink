@@ -69,7 +69,6 @@
 			loading = false;
 		}
 	}
-
 </script>
 
 <div class="auth-page">
@@ -103,7 +102,11 @@
 				<h3>Sign In / Register</h3>
 				<div>
 					<button onclick={handleCopy} disabled={!mnemonic}>
-						{copyStatus === 'ok' ? 'Copied ✓' : copyStatus === 'fail' ? 'Copy Failed' : 'Copy Phrase'}
+						{copyStatus === 'ok'
+							? 'Copied ✓'
+							: copyStatus === 'fail'
+								? 'Copy Failed'
+								: 'Copy Phrase'}
 					</button>
 					<button onclick={handleGenerate} disabled={loading}> Generate New Phrase </button>
 				</div>

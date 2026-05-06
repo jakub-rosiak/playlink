@@ -157,7 +157,7 @@ async def get_current_user_address(
         return _decode_jwt(token)
     except jwt.ExpiredSignatureError:
         raise HTTPException(status_code=401, detail="Token expired") from None
-    except (jwt.InvalidTokenError, KeyError):
+    except jwt.InvalidTokenError, KeyError:
         raise HTTPException(status_code=401, detail="Invalid token") from None
 
 
@@ -579,7 +579,7 @@ async def websocket_chat(
             try:
                 data = json.loads(raw)
                 content = str(data.get("content", "")).strip()
-            except (ValueError, TypeError):
+            except ValueError, TypeError:
                 continue
             if not content or len(content) > 1000:
                 continue

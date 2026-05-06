@@ -66,7 +66,10 @@
 			<p class="empty">No messages yet. Say hi.</p>
 		{:else}
 			{#each messages as msg (msg.id)}
-				<article class="msg" class:mine={msg.sender_address.toLowerCase() === data.address.toLowerCase()}>
+				<article
+					class="msg"
+					class:mine={msg.sender_address.toLowerCase() === data.address.toLowerCase()}
+				>
 					<div class="meta">
 						<span class="user">{msg.sender_username || shortAddr(msg.sender_address)}</span>
 						<span class="time">{fmtTime(msg.created_at)}</span>

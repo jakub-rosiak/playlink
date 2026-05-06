@@ -5,11 +5,7 @@ import { redirect } from '@sveltejs/kit';
 import { jwtDecode } from 'jwt-decode';
 
 function backendBase(): string {
-	return (
-		privateEnv.BACKEND_INTERNAL_URL ||
-		env.PUBLIC_BACKEND_URL ||
-		'http://localhost:8000'
-	);
+	return privateEnv.BACKEND_INTERNAL_URL || env.PUBLIC_BACKEND_URL || 'http://localhost:8000';
 }
 
 interface SessionTokenClaims {

@@ -26,9 +26,7 @@ def _all(session: Session, statement):
     return session.exec(statement).all()
 
 
-def _seed_room_and_users(
-    session: Session, room_name: str, members: list[str]
-) -> Room:
+def _seed_room_and_users(session: Session, room_name: str, members: list[str]) -> Room:
     user_objs = []
     for addr in members:
         u = User(identity_address=addr)
@@ -53,9 +51,11 @@ def _seed_room_and_users(
 
 def test_chat_rejects_bad_token(client: TestClient, session: Session):
     _seed_room_and_users(session, "r1", ["0xabc"])
-    with pytest.raises(WebSocketDisconnect) as exc:
-        with client.websocket_connect("/ws/rooms/r1/chat?token=garbage"):
-            pass
+    with (
+        pytest.raises(WebSocketDisconnect) as exc,
+        client.websocket_connect("/ws/rooms/r1/chat?token=garbage"),
+    ):
+        pass
     assert exc.value.code == 4401
 
 
@@ -65,9 +65,11 @@ def test_chat_rejects_non_member(client: TestClient, session: Session):
     session.add(User(identity_address=outsider))
     session.commit()
     token = _mint_token(outsider)
-    with pytest.raises(WebSocketDisconnect) as exc:
-        with client.websocket_connect(f"/ws/rooms/r2/chat?token={token}"):
-            pass
+    with (
+        pytest.raises(WebSocketDisconnect) as exc,
+        client.websocket_connect(f"/ws/rooms/r2/chat?token={token}"),
+    ):
+        pass
     assert exc.value.code == 4403
 
 
@@ -76,9 +78,11 @@ def test_chat_rejects_missing_room(client: TestClient, session: Session):
     session.add(User(identity_address=addr))
     session.commit()
     token = _mint_token(addr)
-    with pytest.raises(WebSocketDisconnect) as exc:
-        with client.websocket_connect(f"/ws/rooms/nope/chat?token={token}"):
-            pass
+    with (
+        pytest.raises(WebSocketDisconnect) as exc,
+        client.websocket_connect(f"/ws/rooms/nope/chat?token={token}"),
+    ):
+        pass
     assert exc.value.code == 4404
 
 

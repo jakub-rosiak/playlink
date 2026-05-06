@@ -24,9 +24,7 @@ def upgrade() -> None:
         "message",
         sa.Column("id", sa.Integer(), nullable=False),
         sa.Column("room_id", sa.Integer(), nullable=False),
-        sa.Column(
-            "sender_address", sqlmodel.sql.sqltypes.AutoString(), nullable=False
-        ),
+        sa.Column("sender_address", sqlmodel.sql.sqltypes.AutoString(), nullable=False),
         sa.Column("content", sqlmodel.sql.sqltypes.AutoString(), nullable=False),
         sa.Column("created_at", sa.DateTime(), nullable=False),
         sa.ForeignKeyConstraint(
@@ -35,9 +33,7 @@ def upgrade() -> None:
         ),
         sa.PrimaryKeyConstraint("id"),
     )
-    op.create_index(
-        op.f("ix_message_room_id"), "message", ["room_id"], unique=False
-    )
+    op.create_index(op.f("ix_message_room_id"), "message", ["room_id"], unique=False)
     op.create_index(
         op.f("ix_message_sender_address"),
         "message",

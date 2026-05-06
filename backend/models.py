@@ -29,9 +29,7 @@ class Message(SQLModel, table=True):
     room_id: int = Field(foreign_key="room.id", index=True)
     sender_address: str = Field(index=True)
     content: str
-    created_at: datetime = Field(
-        default_factory=lambda: datetime.now(UTC), index=True
-    )
+    created_at: datetime = Field(default_factory=lambda: datetime.now(UTC), index=True)
 
 
 class Game(SQLModel, table=True):

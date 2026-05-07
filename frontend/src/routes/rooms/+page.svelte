@@ -336,6 +336,20 @@
 		</div>
 
 		<aside class="side-col" bind:this={sideColRef}>
+			<div class="create-fab">
+				{#if !data.isAuthenticated}
+					<span class="auth-warn small-caps">Identity required</span>
+				{/if}
+				<OrnateButton
+					variant="primary"
+					size="md"
+					disabled={!data.isAuthenticated}
+					onclick={() => (createOpen = true)}
+				>
+					{#snippet children()}+ Create Lobby{/snippet}
+				</OrnateButton>
+			</div>
+
 			<InnerPanel>
 				{#snippet children()}
 					{#if selectedRoom}
@@ -507,20 +521,6 @@
 			</InnerPanel>
 		</aside>
 	</div>
-</div>
-
-<div class="create-fab">
-	{#if !data.isAuthenticated}
-		<span class="auth-warn small-caps">Identity required</span>
-	{/if}
-	<OrnateButton
-		variant="primary"
-		size="md"
-		disabled={!data.isAuthenticated}
-		onclick={() => (createOpen = true)}
-	>
-		{#snippet children()}+ Create Lobby{/snippet}
-	</OrnateButton>
 </div>
 
 <SystemDialog
@@ -1011,18 +1011,7 @@
 		justify-content: flex-end;
 		gap: 0.75rem;
 		flex-wrap: wrap;
-		margin: 1.5rem 0.5rem 1.25rem;
-	}
-
-	@media (min-width: 1024px) {
-		.create-fab {
-			position: fixed;
-			right: 2rem;
-			bottom: 5.5rem;
-			margin: 0;
-			justify-content: flex-end;
-			z-index: 50;
-		}
+		margin: 0 0 1rem;
 	}
 
 	.auth-warn {

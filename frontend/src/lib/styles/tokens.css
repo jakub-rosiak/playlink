@@ -60,32 +60,31 @@
 	--blood-faint: rgba(181, 54, 54, 0.18);
 
 	/* --- Page surfaces ---
-	   Warm dark brown (NOT black) so panels and ornaments read against
-	   atmosphere rather than a void. Matches D2R "stone wall" backdrop. */
-	--bg-page: #14100a;
-	--bg-frame: #1a140e;
-	--bg-panel: #0c0805;
-	--bg-deep: #07050a;
+	   Cool dark slate (NOT pure black) so panels read against atmosphere
+	   rather than a void. Matches D2R Options-screen backdrop. */
+	--bg-page: #131312;
+	--bg-frame: #181816;
+	--bg-panel: #0c0c0b;
+	--bg-deep: #08080a;
 
 	/* --- Stone panel (the *inside* of an InnerPanel) ---
-	   For text-heavy panels (game list, lobby chat) D2R uses a *dark* stone
-	   surface so light type stays legible — but it is warm dark brown, not
-	   black. The mid value is the dominant tone; light is the upper-third
-	   highlight; edge is the corners; shadow is the absolute darkest spots. */
-	--stone-panel-light: #3a312a;
-	--stone-panel-mid: #261f19;
-	--stone-panel-edge: #18120e;
-	--stone-panel-shadow: #0e0a07;
+	   Neutral slate-grey — cooler than the previous warm-brown. D2R Options
+	   uses this same near-neutral tone for the stone slab interior. */
+	--stone-panel-light: #38362f;
+	--stone-panel-mid: #25241f;
+	--stone-panel-edge: #16161a;
+	--stone-panel-shadow: #0a0a0c;
 
-	/* --- Bronze frame (the metal ring around each panel) ---
-	   Aged bronze: warm brown undertones, not bright gold. */
-	--bronze-mid: #5a4626;
-	--bronze-high: #9a7a3a;
-	--bronze-low: #2e2114;
-	--gold-hairline: #c8a04a;
-	--bronze-rivet-hot: #e6c478;
-	--bronze-rivet-mid: #8a6a3a;
-	--bronze-rivet-shadow: #1a0e04;
+	/* --- Pewter frame (the metal ring around each panel) ---
+	   Aged silver-pewter, NOT bronze — cooler greys with a faint warm tint
+	   in the highlight so it doesn't feel sterile. */
+	--bronze-mid: #555149;
+	--bronze-high: #968f7e;
+	--bronze-low: #1c1b18;
+	--gold-hairline: #b8a062;
+	--bronze-rivet-hot: #c8c0a8;
+	--bronze-rivet-mid: #6a665b;
+	--bronze-rivet-shadow: #14130f;
 
 	/* --- Stone texture (user-provided 1024x1024 tile) ---
 	   The PNG is intentionally dark (subtle ornamental veining). We layer it

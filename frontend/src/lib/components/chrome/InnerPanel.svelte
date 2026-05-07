@@ -63,17 +63,17 @@
 			/* drop shadow */
 			0 14px 40px rgba(0, 0, 0, 0.7),
 			0 2px 0 rgba(0, 0, 0, 0.6),
-			/* bronze ring (thick) */
+			/* pewter ring (thick) */
 			0 0 0 14px var(--bronze-mid),
-			/* hairline at the outer edge of the bronze */
+			/* hairline at the outer edge of the pewter */
 			0 0 0 16px var(--bronze-low),
-			/* top + left highlight bevel on the bronze */
-			inset 0 2px 0 rgba(232, 192, 124, 0.5),
-			inset 2px 0 0 rgba(232, 192, 124, 0.32),
+			/* top + left highlight bevel on the pewter (cool, not warm) */
+			inset 0 2px 0 rgba(180, 175, 160, 0.45),
+			inset 2px 0 0 rgba(180, 175, 160, 0.28),
 			/* bottom + right shadow bevel */
-			inset 0 -2px 0 rgba(0, 0, 0, 0.7),
-			inset -2px 0 0 rgba(0, 0, 0, 0.55),
-			/* gold hairline kissing the stone */
+			inset 0 -2px 0 rgba(0, 0, 0, 0.75),
+			inset -2px 0 0 rgba(0, 0, 0, 0.6),
+			/* gold hairline kissing the stone (sole warm accent on the metal) */
 			inset 0 0 0 3px var(--gold-hairline),
 			/* dark separation line */
 			inset 0 0 0 4px var(--bronze-low),
@@ -116,20 +116,21 @@
 		opacity: 0.6;
 	}
 
-	/* Baked light from the upper third — the "lit panel" feel of D2R. */
+	/* Baked light from the upper third — the "lit panel" feel of D2R Options.
+	   Neutral white-ish (not warm gold) so the slate stays cool. */
 	.stone-light {
 		position: absolute;
 		inset: 0;
 		background:
 			radial-gradient(
 				ellipse 75% 55% at 50% 28%,
-				rgba(255, 235, 200, 0.18) 0%,
-				rgba(255, 235, 200, 0.06) 35%,
+				rgba(225, 225, 215, 0.16) 0%,
+				rgba(225, 225, 215, 0.05) 35%,
 				transparent 75%
 			),
 			radial-gradient(
 				ellipse 110% 70% at 50% 100%,
-				rgba(0, 0, 0, 0.35) 0%,
+				rgba(0, 0, 0, 0.4) 0%,
 				transparent 70%
 			);
 	}
@@ -202,10 +203,10 @@
 			var(--bronze-rivet-shadow) 100%
 		);
 		box-shadow:
-			inset 0 -1px 1px rgba(0, 0, 0, 0.6),
-			inset 0 1px 1px rgba(255, 232, 144, 0.45),
+			inset 0 -1px 1px rgba(0, 0, 0, 0.65),
+			inset 0 1px 1px rgba(220, 215, 200, 0.4),
 			0 1px 2px rgba(0, 0, 0, 0.85),
-			0 0 4px rgba(154, 122, 58, 0.35);
+			0 0 4px rgba(120, 116, 105, 0.35);
 	}
 	/* Position rivets on the centerline of the bronze ring (~7px in from edge). */
 	.rivet--tl {

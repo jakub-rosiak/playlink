@@ -115,10 +115,11 @@
 		position: relative;
 		min-height: 100vh;
 		padding: clamp(24px, 3vw, 48px);
-		/* Warm dark brown stone wall — never plain black. */
+		/* Cool dark stone wall — neutral charcoal with the faintest warm bias
+		   at the centre so panels still feel "in front of" something organic. */
 		background:
-			radial-gradient(ellipse at 50% 30%, #251c12 0%, #15100a 60%, #0a0705 100%),
-			#0a0705;
+			radial-gradient(ellipse at 50% 30%, #1f1d18 0%, #131311 60%, #0a0a08 100%),
+			#0a0a08;
 		overflow: hidden;
 	}
 
@@ -158,16 +159,15 @@
 			);
 	}
 
-	/* Quatrefoil / cross repeat pattern, 80px tile, very low contrast.
-	   Inline SVG so there's no asset request. The pattern lives on top of
-	   the page-frame's brown gradient — it adds "carved wallpaper" feel. */
+	/* Quatrefoil / cross repeat pattern, 96px tile, very low contrast.
+	   Pattern stroke is now a cool grey to match the slate wall. */
 	.wall-pattern {
 		position: absolute;
 		inset: 0;
 		pointer-events: none;
 		z-index: 0;
-		opacity: 0.55;
-		background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='96' height='96' viewBox='0 0 96 96'><g fill='none' stroke='%23362617' stroke-width='1' opacity='0.9'><path d='M48 18 C 56 18 60 22 60 30 C 60 38 56 42 48 42 C 40 42 36 38 36 30 C 36 22 40 18 48 18 Z'/><path d='M48 54 C 56 54 60 58 60 66 C 60 74 56 78 48 78 C 40 78 36 74 36 66 C 36 58 40 54 48 54 Z'/><path d='M0 48 L96 48' stroke-opacity='0.18'/><path d='M48 0 L48 96' stroke-opacity='0.18'/><circle cx='0' cy='0' r='2' fill='%23362617' stroke='none'/><circle cx='96' cy='0' r='2' fill='%23362617' stroke='none'/><circle cx='0' cy='96' r='2' fill='%23362617' stroke='none'/><circle cx='96' cy='96' r='2' fill='%23362617' stroke='none'/></g></svg>");
+		opacity: 0.45;
+		background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='96' height='96' viewBox='0 0 96 96'><g fill='none' stroke='%23363430' stroke-width='1' opacity='0.9'><path d='M48 18 C 56 18 60 22 60 30 C 60 38 56 42 48 42 C 40 42 36 38 36 30 C 36 22 40 18 48 18 Z'/><path d='M48 54 C 56 54 60 58 60 66 C 60 74 56 78 48 78 C 40 78 36 74 36 66 C 36 58 40 54 48 54 Z'/><path d='M0 48 L96 48' stroke-opacity='0.18'/><path d='M48 0 L48 96' stroke-opacity='0.18'/><circle cx='0' cy='0' r='2' fill='%23363430' stroke='none'/><circle cx='96' cy='0' r='2' fill='%23363430' stroke='none'/><circle cx='0' cy='96' r='2' fill='%23363430' stroke='none'/><circle cx='96' cy='96' r='2' fill='%23363430' stroke='none'/></g></svg>");
 		background-size: 96px 96px;
 		mix-blend-mode: screen;
 	}

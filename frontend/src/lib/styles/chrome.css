@@ -178,25 +178,21 @@
 	box-shadow: inset 0 0 8px rgba(0, 0, 0, 0.85);
 }
 .scroll-d2::-webkit-scrollbar-thumb {
-	background:
-		linear-gradient(180deg, var(--gold-base) 0%, var(--gold-muted) 50%, var(--gold-dark) 100%),
-		var(--gold-muted);
+	background: var(--gold-muted);
 	border: 1px solid var(--stone-0);
 	box-shadow:
-		inset 0 1px 0 rgba(255, 232, 144, 0.55),
+		inset 0 1px 0 rgba(255, 232, 144, 0.45),
 		inset 0 -1px 0 rgba(0, 0, 0, 0.65),
 		inset 1px 0 0 rgba(0, 0, 0, 0.5),
-		inset -1px 0 0 rgba(0, 0, 0, 0.5),
-		0 0 6px rgba(227, 188, 116, 0.35);
+		inset -1px 0 0 rgba(0, 0, 0, 0.5);
 	background-clip: padding-box;
 	border-radius: 0;
 }
 .scroll-d2::-webkit-scrollbar-thumb:hover {
-	background: linear-gradient(180deg, var(--gold-hot) 0%, var(--gold-base) 50%, var(--gold-muted) 100%);
+	background: var(--gold-base);
 	box-shadow:
-		inset 0 1px 0 rgba(255, 232, 144, 0.85),
-		inset 0 -1px 0 rgba(0, 0, 0, 0.65),
-		0 0 10px rgba(255, 232, 144, 0.55);
+		inset 0 1px 0 rgba(255, 232, 144, 0.65),
+		inset 0 -1px 0 rgba(0, 0, 0, 0.65);
 }
 .scroll-d2::-webkit-scrollbar-button:vertical:start,
 .scroll-d2::-webkit-scrollbar-button:vertical:end {
@@ -289,18 +285,12 @@
 	-webkit-background-clip: text;
 	background-clip: text;
 	-webkit-text-fill-color: transparent;
-	text-shadow:
-		0 1px 0 rgba(0, 0, 0, 0.85),
-		0 0 14px rgba(227, 188, 116, 0.32),
-		0 0 24px rgba(227, 188, 116, 0.18);
 	filter: drop-shadow(0 1px 0 rgba(0, 0, 0, 0.85));
 }
 
 .etched-bone {
 	color: var(--bone-bright);
-	text-shadow:
-		0 0 18px rgba(241, 233, 205, 0.12),
-		0 1px 0 rgba(0, 0, 0, 0.75);
+	text-shadow: 0 1px 0 rgba(0, 0, 0, 0.75);
 }
 
 /* Reset radius on common elements globally so we don't fight defaults. */

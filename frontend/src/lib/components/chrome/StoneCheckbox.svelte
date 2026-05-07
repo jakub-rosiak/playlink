@@ -85,7 +85,7 @@
 		align-items: center;
 		justify-content: center;
 		flex-shrink: 0;
-		background: linear-gradient(180deg, var(--stone-1) 0%, var(--stone-2) 100%);
+		background: var(--stone-1);
 		border: 1px solid var(--stone-5);
 		border-radius: 0;
 		box-shadow: var(--bevel-in);
@@ -108,7 +108,6 @@
 		width: 75%;
 		height: 75%;
 		color: var(--gold-base);
-		filter: drop-shadow(0 0 4px rgba(227, 188, 116, 0.55));
 		transform: scale(0);
 		transform-origin: center;
 		transition: transform 140ms cubic-bezier(0.34, 1.56, 0.64, 1);
@@ -136,9 +135,6 @@
 
 	.stone-check:not(.disabled):hover .box {
 		border-color: var(--gold-muted);
-		box-shadow:
-			var(--bevel-in),
-			var(--glow-soft);
 	}
 
 	.stone-check:not(.disabled):hover .label-text {

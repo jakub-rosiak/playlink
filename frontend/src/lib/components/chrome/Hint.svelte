@@ -103,6 +103,6 @@
 		color: var(--gold-lit);
 	}
 	button.hint:hover .key {
-		filter: brightness(1.15);
+		border-color: var(--gold-muted);
 	}
 </style>

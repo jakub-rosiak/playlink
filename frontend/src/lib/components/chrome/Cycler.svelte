@@ -133,12 +133,11 @@
 	}
 
 	.chev:not(:disabled):hover {
-		color: var(--gold-lit);
-		filter: drop-shadow(0 0 6px rgba(241, 207, 143, 0.55));
+		color: var(--gold-hot);
 	}
 
 	.chev:not(:disabled):active {
-		filter: drop-shadow(0 0 8px rgba(241, 207, 143, 0.7));
+		color: var(--gold-hot);
 	}
 
 	.chev:disabled {
@@ -169,8 +168,6 @@
 			'c2sc' 1;
 		min-width: 6ch;
 		text-align: center;
-		text-shadow:
-			0 0 14px rgba(241, 233, 205, 0.12),
-			0 1px 0 rgba(0, 0, 0, 0.7);
+		text-shadow: 0 1px 0 rgba(0, 0, 0, 0.7);
 	}
 </style>

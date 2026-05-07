@@ -334,7 +334,6 @@
 	}
 
 	.sigil-halo {
-		filter: drop-shadow(0 0 14px rgba(227, 188, 116, 0.28));
 		flex-shrink: 0;
 	}
 

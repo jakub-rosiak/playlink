@@ -298,7 +298,6 @@
 
 	.member-name.is-me-name {
 		color: var(--bone-bright);
-		text-shadow: 0 0 10px rgba(241, 233, 205, 0.18);
 	}
 
 	.member-addr {
@@ -348,13 +347,10 @@
 		letter-spacing: var(--track-loose);
 		font-size: 0.72rem;
 		padding: 0.15rem 0;
-		transition:
-			color 140ms ease,
-			text-shadow 140ms ease;
+		transition: color 140ms ease;
 	}
 	.back:hover {
 		color: var(--gold-lit);
-		text-shadow: 0 0 10px rgba(241, 207, 143, 0.45);
 	}
 
 	.shard {
@@ -502,7 +498,7 @@
 		text-align: right;
 	}
 	.msg.mine:hover {
-		box-shadow: inset 0 0 18px rgba(227, 188, 116, 0.14);
+		background: rgba(227, 188, 116, 0.22);
 	}
 
 	.msg-meta {

@@ -67,15 +67,13 @@
 		letter-spacing: var(--track-extra);
 		color: var(--bone-bright);
 		text-decoration: none;
-		text-shadow:
-			0 0 18px rgba(241, 233, 205, 0.18),
-			0 1px 0 rgba(0, 0, 0, 0.75);
+		text-shadow: 0 1px 0 rgba(0, 0, 0, 0.75);
 	}
 
 	.brand-mark {
 		color: var(--gold-base);
 		font-size: 0.7em;
-		text-shadow: 0 0 12px rgba(227, 188, 116, 0.5);
+		text-shadow: 0 1px 0 rgba(0, 0, 0, 0.75);
 	}
 
 	.brand:hover {

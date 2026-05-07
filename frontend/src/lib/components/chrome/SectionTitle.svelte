@@ -66,9 +66,7 @@
 
 	.tone-gold .title {
 		color: var(--gold-base);
-		text-shadow:
-			0 0 12px rgba(227, 188, 116, 0.22),
-			0 1px 0 rgba(0, 0, 0, 0.75);
+		text-shadow: 0 1px 0 rgba(0, 0, 0, 0.75);
 	}
 	.tone-bone .title {
 		color: var(--bone-bright);
@@ -76,9 +74,7 @@
 	}
 	.tone-blood .title {
 		color: var(--blood-bright);
-		text-shadow:
-			0 0 12px rgba(181, 54, 54, 0.32),
-			0 1px 0 rgba(0, 0, 0, 0.75);
+		text-shadow: 0 1px 0 rgba(0, 0, 0, 0.75);
 	}
 	.tone-blood .rule {
 		background: linear-gradient(

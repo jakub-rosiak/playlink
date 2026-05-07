@@ -87,8 +87,7 @@
 
 	.tone-gold {
 		color: var(--gold-base);
-		filter: drop-shadow(0 0 6px rgba(227, 188, 116, 0.45))
-			drop-shadow(0 1px 0 rgba(0, 0, 0, 0.7));
+		filter: drop-shadow(0 1px 0 rgba(0, 0, 0, 0.7));
 	}
 
 	.tone-bone {

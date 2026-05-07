@@ -209,7 +209,7 @@
 		font-family: var(--font-mono);
 		font-size: 0.7rem;
 		color: var(--gold-base);
-		text-shadow: 0 0 6px rgba(227, 188, 116, 0.45);
+		text-shadow: 0 1px 0 rgba(0, 0, 0, 0.7);
 		pointer-events: none;
 		user-select: none;
 	}

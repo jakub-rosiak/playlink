@@ -230,16 +230,13 @@
 	}
 
 	.tone-gold .left-bar {
-		background: linear-gradient(180deg, var(--gold-lit) 0%, var(--gold-dark) 100%);
-		box-shadow: 0 0 12px rgba(227, 188, 116, 0.4);
+		background: var(--gold-muted);
 	}
 	.tone-blood .left-bar {
-		background: linear-gradient(180deg, var(--blood-bright) 0%, #4a1414 100%);
-		box-shadow: 0 0 12px rgba(181, 54, 54, 0.4);
+		background: var(--blood);
 	}
 	.tone-green .left-bar {
-		background: linear-gradient(180deg, var(--pip-good) 0%, #3d6b2c 100%);
-		box-shadow: 0 0 12px rgba(127, 191, 92, 0.35);
+		background: var(--pip-good);
 	}
 
 	.title-bar {
@@ -266,10 +263,9 @@
 		background: linear-gradient(
 			90deg,
 			transparent 0%,
-			var(--gold-lit) 50%,
+			var(--gold-muted) 50%,
 			transparent 100%
 		);
-		box-shadow: 0 0 8px rgba(227, 188, 116, 0.5);
 	}
 	.tone-blood .top-rule {
 		background: linear-gradient(
@@ -334,13 +330,10 @@
 		padding: 0 0.25rem;
 		cursor: pointer;
 		border-radius: 0;
-		transition:
-			color 140ms ease,
-			text-shadow 140ms ease;
+		transition: color 140ms ease;
 	}
 	.close-btn:hover {
 		color: var(--gold-lit);
-		text-shadow: 0 0 8px rgba(241, 207, 143, 0.55);
 	}
 	.close-btn:focus-visible {
 		outline: 1px solid var(--gold-lit);

@@ -134,82 +134,61 @@
 		font-size: 0.92rem;
 	}
 
-	/* --- Primary: gold gradient --- */
+	/* All variants: flat stone face + crisp 1px bevel.
+	   Primary = active/highlighted (brighter gold border, lighter stone face,
+	   matching the D2R Options "Default" button when focused).
+	   Secondary = idle stone slab. Danger = blood-tinted slab. Ghost = no fill. */
+
+	/* --- Primary: highlighted stone slab (D2R "Default") --- */
 	.ornate--primary {
-		background: linear-gradient(180deg, var(--gold-lit) 0%, var(--gold-muted) 100%);
-		color: var(--stone-0);
-		border-color: var(--gold-dark);
+		background: var(--stone-5);
+		color: var(--gold-lit);
+		border-color: var(--gold-base);
 		box-shadow:
-			inset 0 1px 0 rgba(255, 230, 160, 0.45),
-			inset 0 -1px 0 rgba(0, 0, 0, 0.55),
-			inset 1px 0 0 rgba(255, 230, 160, 0.18),
-			inset -1px 0 0 rgba(0, 0, 0, 0.4),
-			0 1px 0 rgba(0, 0, 0, 0.6),
-			var(--glow-soft);
-		text-shadow: 0 1px 0 rgba(255, 230, 160, 0.35);
+			inset 0 0 0 1px var(--stone-1),
+			inset 0 1px 0 rgba(227, 188, 116, 0.18),
+			inset 0 -1px 0 rgba(0, 0, 0, 0.85),
+			inset 1px 0 0 rgba(227, 188, 116, 0.08),
+			inset -1px 0 0 rgba(0, 0, 0, 0.65);
 	}
 	.ornate--primary:hover:not(:disabled):not(.is-disabled) {
-		filter: brightness(1.08);
-		box-shadow:
-			inset 0 1px 0 rgba(255, 230, 160, 0.55),
-			inset 0 -1px 0 rgba(0, 0, 0, 0.55),
-			inset 1px 0 0 rgba(255, 230, 160, 0.22),
-			inset -1px 0 0 rgba(0, 0, 0, 0.4),
-			0 1px 0 rgba(0, 0, 0, 0.6),
-			var(--glow-strong);
+		color: var(--gold-hot);
+		border-color: var(--gold-lit);
 	}
 
-	/* --- Secondary: stone gradient --- */
+	/* --- Secondary: stone slab --- */
 	.ornate--secondary {
-		background: linear-gradient(180deg, var(--stone-4) 0%, var(--stone-2) 100%);
+		background: var(--stone-4);
 		color: var(--bone);
 		border-color: var(--gold-dark);
 		box-shadow:
-			inset 0 1px 0 rgba(255, 230, 160, 0.12),
-			inset 1px 0 0 rgba(227, 188, 116, 0.07),
+			inset 0 1px 0 rgba(227, 188, 116, 0.1),
+			inset 1px 0 0 rgba(227, 188, 116, 0.05),
 			inset 0 -1px 0 rgba(0, 0, 0, 0.85),
-			inset -1px 0 0 rgba(0, 0, 0, 0.65),
-			0 1px 0 rgba(0, 0, 0, 0.55);
+			inset -1px 0 0 rgba(0, 0, 0, 0.65);
 	}
 	.ornate--secondary:hover:not(:disabled):not(.is-disabled) {
-		filter: brightness(1.08);
 		color: var(--bone-bright);
 		border-color: var(--gold-muted);
-		box-shadow:
-			inset 0 1px 0 rgba(255, 230, 160, 0.22),
-			inset 1px 0 0 rgba(227, 188, 116, 0.12),
-			inset 0 -1px 0 rgba(0, 0, 0, 0.85),
-			inset -1px 0 0 rgba(0, 0, 0, 0.65),
-			0 1px 0 rgba(0, 0, 0, 0.55),
-			var(--glow-mid);
 	}
 
-	/* --- Danger: blood-tinted --- */
+	/* --- Danger: blood slab --- */
 	.ornate--danger {
-		background: linear-gradient(180deg, var(--blood) 0%, #6a1f1f 100%);
+		background: #3a1010;
 		color: var(--bone-bright);
 		border-color: #4a1414;
 		box-shadow:
-			inset 0 1px 0 rgba(255, 200, 200, 0.18),
+			inset 0 1px 0 rgba(255, 200, 200, 0.12),
 			inset 0 -1px 0 rgba(0, 0, 0, 0.85),
-			inset 1px 0 0 rgba(255, 180, 180, 0.08),
-			inset -1px 0 0 rgba(0, 0, 0, 0.55),
-			0 1px 0 rgba(0, 0, 0, 0.55);
-		text-shadow: 0 1px 0 rgba(0, 0, 0, 0.6);
+			inset 1px 0 0 rgba(255, 180, 180, 0.06),
+			inset -1px 0 0 rgba(0, 0, 0, 0.55);
 	}
 	.ornate--danger:hover:not(:disabled):not(.is-disabled) {
-		filter: brightness(1.1);
-		color: #ffe8e8;
-		box-shadow:
-			inset 0 1px 0 rgba(255, 200, 200, 0.28),
-			inset 0 -1px 0 rgba(0, 0, 0, 0.85),
-			inset 1px 0 0 rgba(255, 180, 180, 0.12),
-			inset -1px 0 0 rgba(0, 0, 0, 0.55),
-			0 1px 0 rgba(0, 0, 0, 0.55),
-			0 0 22px rgba(211, 88, 88, 0.55);
+		color: #ffd9d9;
+		border-color: var(--blood-bright);
 	}
 
-	/* --- Ghost: transparent --- */
+	/* --- Ghost: no fill --- */
 	.ornate--ghost {
 		background: transparent;
 		color: var(--bone-muted);
@@ -221,10 +200,6 @@
 	.ornate--ghost:hover:not(:disabled):not(.is-disabled) {
 		color: var(--bone-bright);
 		border-color: var(--gold-muted);
-		box-shadow:
-			inset 0 1px 0 rgba(227, 188, 116, 0.12),
-			inset 0 -1px 0 rgba(0, 0, 0, 0.5),
-			var(--glow-soft);
 	}
 
 	/* --- Active / pressed --- */

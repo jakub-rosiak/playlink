@@ -784,9 +784,9 @@
 		letter-spacing: var(--track-extra);
 		padding: 1px 6px;
 		color: var(--gold-hot);
-		background: linear-gradient(180deg, rgba(227, 188, 116, 0.18), rgba(138, 108, 58, 0.12));
+		background: rgba(227, 188, 116, 0.14);
 		border: 1px solid rgba(227, 188, 116, 0.5);
-		text-shadow: 0 0 6px rgba(255, 232, 144, 0.45);
+		text-shadow: 0 1px 0 rgba(0, 0, 0, 0.7);
 		flex-shrink: 0;
 	}
 
@@ -929,7 +929,7 @@
 
 	.text-input {
 		width: 100%;
-		background: linear-gradient(180deg, #060503 0%, #0a0907 100%);
+		background: #080604;
 		border: 1px solid var(--stone-5);
 		border-radius: 0;
 		color: var(--bone-bright);
@@ -947,9 +947,7 @@
 	.text-input:focus {
 		outline: none;
 		border-color: var(--gold-muted);
-		box-shadow:
-			inset 0 1px 2px rgba(0, 0, 0, 0.85),
-			var(--glow-soft);
+		box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.85);
 	}
 
 	.stats {
@@ -965,7 +963,7 @@
 		gap: 0.25rem;
 		padding: 0.6rem 0.75rem;
 		border: 1px solid var(--stone-5);
-		background: linear-gradient(180deg, #0a0907 0%, #060503 100%);
+		background: #080604;
 	}
 
 	.stat-label {
@@ -1021,7 +1019,7 @@
 		color: var(--blood-bright);
 		text-transform: uppercase;
 		padding: 0.45rem 0.7rem;
-		background: linear-gradient(180deg, #0a0907 0%, #060503 100%);
+		background: #080604;
 		border: 1px solid #4a1414;
 	}
 

@@ -88,11 +88,10 @@
 		letter-spacing: 1.6em;
 		font-size: 0.65rem;
 		padding-left: 1.6em;
-		text-shadow: 0 0 8px rgba(227, 188, 116, 0.4);
 	}
 
 	.crest-wrap {
-		filter: drop-shadow(0 0 24px rgba(227, 188, 116, 0.18));
+		filter: drop-shadow(0 1px 0 rgba(0, 0, 0, 0.7));
 	}
 
 	.hairline {
@@ -112,10 +111,7 @@
 		font-size: clamp(3rem, 8vw, 7rem);
 		letter-spacing: 0.08em;
 		margin: 0.4rem 0;
-		text-shadow:
-			0 0 22px rgba(227, 188, 116, 0.32),
-			0 1px 0 rgba(0, 0, 0, 0.85),
-			0 -1px 0 rgba(255, 230, 160, 0.06);
+		text-shadow: 0 1px 0 rgba(0, 0, 0, 0.85);
 		animation-fill-mode: both;
 	}
 
@@ -129,19 +125,6 @@
 
 	.cta {
 		margin-top: 1.5rem;
-		animation:
-			ctaPulse 3.5s ease-in-out infinite;
-		animation-fill-mode: both;
-	}
-
-	@keyframes ctaPulse {
-		0%,
-		100% {
-			filter: drop-shadow(0 0 12px rgba(227, 188, 116, 0.25));
-		}
-		50% {
-			filter: drop-shadow(0 0 22px rgba(227, 188, 116, 0.45));
-		}
 	}
 
 	.version {

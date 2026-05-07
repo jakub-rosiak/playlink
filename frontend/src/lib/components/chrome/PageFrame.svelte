@@ -11,7 +11,6 @@
 	     Replaces the previous black void: panels sit ON the wall, not float in space. -->
 	<div class="frame-back" aria-hidden="true">
 		<div class="wall-pattern"></div>
-		<div class="torch-glow torch-flicker"></div>
 		<div class="vignette"></div>
 	</div>
 
@@ -115,11 +114,7 @@
 		position: relative;
 		min-height: 100vh;
 		padding: clamp(24px, 3vw, 48px);
-		/* Cool dark stone wall — neutral charcoal with the faintest warm bias
-		   at the centre so panels still feel "in front of" something organic. */
-		background:
-			radial-gradient(ellipse at 50% 30%, #1f1d18 0%, #131311 60%, #0a0a08 100%),
-			#0a0a08;
+		background: #0d0d0b;
 		overflow: hidden;
 	}
 
@@ -141,22 +136,6 @@
 		);
 		pointer-events: none;
 		z-index: 2;
-	}
-
-	/* Warm gold "torch" glow — atmosphere without relying on tiled imagery.
-	   Subtler than before; the wall pattern carries most of the texture. */
-	.torch-glow {
-		position: absolute;
-		inset: 0;
-		pointer-events: none;
-		z-index: 1;
-		background:
-			radial-gradient(
-				ellipse 70% 45% at 50% 0%,
-				rgba(227, 188, 116, 0.1) 0%,
-				rgba(227, 188, 116, 0.04) 40%,
-				transparent 80%
-			);
 	}
 
 	/* Quatrefoil / cross repeat pattern, 96px tile, very low contrast.

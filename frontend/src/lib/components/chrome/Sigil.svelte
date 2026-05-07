@@ -262,7 +262,6 @@
 		position: absolute;
 		inset: 0;
 		pointer-events: none;
-		box-shadow: inset 0 0 8px rgba(227, 188, 116, 0.18);
 		border: 1px solid var(--stone-6);
 		border-radius: 0;
 		z-index: 2;

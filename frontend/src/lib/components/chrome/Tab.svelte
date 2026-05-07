@@ -93,7 +93,6 @@
 		height: 9px;
 		background: var(--gold-base);
 		clip-path: polygon(0 0, 100% 0, 50% 100%);
-		filter: drop-shadow(0 0 6px rgba(227, 188, 116, 0.55));
 	}
 
 	.tab-text {

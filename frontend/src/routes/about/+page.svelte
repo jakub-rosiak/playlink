@@ -124,7 +124,6 @@
 	.lead :global(em) {
 		color: var(--gold-base);
 		font-style: normal;
-		text-shadow: 0 0 10px rgba(227, 188, 116, 0.25);
 	}
 
 	.prose {

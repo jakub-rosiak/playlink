@@ -38,15 +38,24 @@
 		display: flex;
 		align-items: center;
 		justify-content: center;
-		padding: 1.1rem 1.6rem 1.3rem;
+		padding: clamp(0.7rem, 1.1vw, 1.1rem) clamp(0.9rem, 1.6vw, 1.6rem)
+			clamp(0.85rem, 1.3vw, 1.3rem);
 		color: var(--bone-muted);
 		font-family: var(--font-display);
-		font-size: 1.05rem;
+		font-size: clamp(0.85rem, 1vw, 1.1rem);
 		letter-spacing: var(--track-extra);
 		text-transform: uppercase;
 		text-decoration: none;
 		transition: color 0.18s ease;
 		background: transparent;
+		white-space: nowrap;
+		min-height: 44px;
+	}
+
+	@media (max-width: 480px) {
+		.tab {
+			letter-spacing: var(--track-loose);
+		}
 	}
 
 	.tab:not(:last-child)::after {

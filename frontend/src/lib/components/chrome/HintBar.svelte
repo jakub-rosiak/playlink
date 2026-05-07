@@ -39,9 +39,16 @@
 	.hint-row {
 		display: flex;
 		flex-wrap: wrap;
-		gap: 1.6rem;
+		gap: clamp(0.6rem, 1.6vw, 1.6rem);
 		align-items: center;
 		justify-content: center;
 		font-family: var(--font-display);
+	}
+
+	/* Touch devices have no keyboard — hide the hint bar entirely. */
+	@media (hover: none) and (pointer: coarse) {
+		.hint-bar {
+			display: none;
+		}
 	}
 </style>

@@ -132,6 +132,8 @@
 	let selectedRoom = $derived(
 		selectedName ? filteredRooms.find((r) => r.name === selectedName) ?? null : null
 	);
+	let listColRef = $state<HTMLElement | null>(null);
+	let sideColRef = $state<HTMLElement | null>(null);
 
 	$effect(() => {
 		// If the selected room disappears (filter or expiry), clear selection.
@@ -139,6 +141,26 @@
 			selectedName = null;
 		}
 	});
+
+	// Click outside the list/side panel deselects current room.
+	$effect(() => {
+		if (!selectedName) return;
+		function handler(e: MouseEvent) {
+			const t = e.target as Node | null;
+			if (!t) return;
+			if (sideColRef?.contains(t)) return;
+			if (listColRef?.contains(t)) return;
+			selectedName = null;
+		}
+		window.addEventListener('mousedown', handler);
+		return () => window.removeEventListener('mousedown', handler);
+	});
+
+	// Helper: check whether the current user is a member of the room.
+	function isMemberOf(room: RoomSummary): boolean {
+		if (!data.isAuthenticated || !data.user) return false;
+		return room.member_addresses.includes(data.user.address);
+	}
 
 	// --- Updated-at clock for the section title trail ---
 	let updatedHHMM = $derived(
@@ -260,38 +282,42 @@
 	</header>
 
 	<div class="split">
-		<div class="list-col">
+		<div class="list-col" bind:this={listColRef}>
 			<InnerPanel padded={false}>
-				<div
-					class="list"
-					style="--list-cols: 1.6fr 1fr 0.6fr 0.6fr 0.5fr; --list-gap: 1rem;"
-				>
+				<div class="list">
 					<ListRow header>
 						{#snippet children()}
-							<span>Name</span>
-							<span>Game</span>
-							<span>Slots</span>
-							<span>Ping</span>
-							<span>Timer</span>
+							<span>Game Name</span>
+							<span class="col-game">Game</span>
+							<span>Players</span>
+							<span class="col-ping">Ping</span>
+							<span class="col-timer">Timer</span>
 						{/snippet}
 					</ListRow>
 
 					<div class="rows scroll-d2">
 						{#each filteredRooms as room (room.name)}
+							{@const member = isMemberOf(room)}
 							<ListRow
 								selected={selectedName === room.name}
+								member={member}
 								onclick={() => (selectedName = room.name)}
 							>
 								{#snippet children()}
-									<span class="cell-name fw-700">{room.name}</span>
-									<span class="cell-game">{room.game}</span>
+									<span class="cell-name fw-700" class:is-member={member}>
+										{room.name}
+										{#if member}
+											<span class="member-tag" aria-label="You are a member">JOINED</span>
+										{/if}
+									</span>
+									<span class="cell-game col-game">{room.game}</span>
 									<span class="cell-slots mono">
 										{room.players_active}/{room.players_max}
 									</span>
-									<span class="cell-ping">
-										<PipMeter value={pipForRoom(room)} tone="auto" size="sm" />
+									<span class="cell-ping col-ping">
+										<PipMeter value={pipForRoom(room)} tone="auto" size="md" />
 									</span>
-									<span class="cell-timer mono" class:warn={timerLow(room)}>
+									<span class="cell-timer mono col-timer" class:warn={timerLow(room)}>
 										{getRemainingTime(room.expires_at)}
 									</span>
 								{/snippet}
@@ -309,7 +335,7 @@
 			</InnerPanel>
 		</div>
 
-		<aside class="side-col">
+		<aside class="side-col" bind:this={sideColRef}>
 			<InnerPanel>
 				{#snippet children()}
 					{#if selectedRoom}
@@ -624,22 +650,24 @@
 		flex: 1;
 	}
 
+	/* Tablet portrait/landscape: keep side panel visible, slightly narrower. */
+	@media (min-width: 768px) and (max-width: 1023px) {
+		.split {
+			grid-template-columns: 6fr 4fr;
+		}
+		.side-col {
+			position: sticky;
+			top: 0;
+			align-self: start;
+			max-height: calc(100vh - 6rem);
+			overflow: auto;
+		}
+	}
+
 	@media (min-width: 1024px) {
 		.split {
 			grid-template-columns: 7fr 3fr;
 			position: relative;
-		}
-
-		.split::before {
-			content: '';
-			position: absolute;
-			top: 0;
-			bottom: 0;
-			left: calc(70% + 0.5rem);
-			width: 1px;
-			background: var(--stone-5);
-			pointer-events: none;
-			opacity: 0.5;
 		}
 
 		.side-col {
@@ -667,6 +695,44 @@
 		flex-direction: column;
 		min-height: 0;
 		flex: 1;
+		/* Default (mobile): 3 visible columns — Name, Players, Ping */
+		--list-cols: 1.6fr 0.8fr 0.7fr;
+		--list-gap: 0.8rem;
+	}
+
+	/* Hide non-essential columns on narrow viewports. */
+	.list :global(.col-game),
+	.list :global(.col-timer) {
+		display: none;
+	}
+
+	@media (min-width: 600px) {
+		.list {
+			/* Add Timer */
+			--list-cols: 1.6fr 0.8fr 0.7fr 0.6fr;
+			--list-gap: 1rem;
+		}
+		.list :global(.col-timer) {
+			display: inline-flex;
+		}
+	}
+
+	@media (min-width: 900px) {
+		.list {
+			/* Add Game column → all 5 visible */
+			--list-cols: 1.6fr 1fr 0.7fr 0.8fr 0.6fr;
+			--list-gap: 1.2rem;
+		}
+		.list :global(.col-game) {
+			display: inline-flex;
+		}
+	}
+
+	@media (min-width: 1280px) {
+		.list {
+			--list-cols: 1.7fr 1fr 0.6fr 0.7fr 0.5fr;
+			--list-gap: 1.5rem;
+		}
 	}
 
 	.rows {
@@ -702,6 +768,26 @@
 		overflow: hidden;
 		text-overflow: ellipsis;
 		white-space: nowrap;
+		display: inline-flex;
+		align-items: center;
+		gap: 0.55rem;
+	}
+
+	.cell-name.is-member {
+		color: var(--gold-lit);
+	}
+
+	.member-tag {
+		display: inline-block;
+		font-family: var(--font-display);
+		font-size: 0.62em;
+		letter-spacing: var(--track-extra);
+		padding: 1px 6px;
+		color: var(--gold-hot);
+		background: linear-gradient(180deg, rgba(227, 188, 116, 0.18), rgba(138, 108, 58, 0.12));
+		border: 1px solid rgba(227, 188, 116, 0.5);
+		text-shadow: 0 0 6px rgba(255, 232, 144, 0.45);
+		flex-shrink: 0;
 	}
 
 	.cell-game {
@@ -709,6 +795,13 @@
 		overflow: hidden;
 		text-overflow: ellipsis;
 		white-space: nowrap;
+		transition: color 140ms ease;
+	}
+
+	:global(.row.is-interactive:hover) .cell-game,
+	:global(.row.is-selected) .cell-game,
+	:global(.row.is-member) .cell-game {
+		color: var(--bone);
 	}
 
 	.cell-slots {
@@ -909,15 +1002,27 @@
 		text-transform: uppercase;
 	}
 
-	/* Floating create button */
+	/* Floating create button — fixed only on desktop (≥1024px).
+	   On smaller screens the side panel stacks below the list and the FAB
+	   would overlap it, so it flows into normal document order at the bottom. */
 	.create-fab {
-		position: fixed;
-		right: 2rem;
-		bottom: 5.5rem;
-		display: inline-flex;
+		display: flex;
 		align-items: center;
+		justify-content: flex-end;
 		gap: 0.75rem;
-		z-index: 50;
+		flex-wrap: wrap;
+		margin: 1.5rem 0.5rem 1.25rem;
+	}
+
+	@media (min-width: 1024px) {
+		.create-fab {
+			position: fixed;
+			right: 2rem;
+			bottom: 5.5rem;
+			margin: 0;
+			justify-content: flex-end;
+			z-index: 50;
+		}
 	}
 
 	.auth-warn {

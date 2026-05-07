@@ -34,7 +34,7 @@
 		const current = lit;
 		if (current > prevLit) {
 			justLit = current - 1;
-			const t = setTimeout(() => (justLit = null), 260);
+			const t = setTimeout(() => (justLit = null), 320);
 			prevLit = current;
 			return () => clearTimeout(t);
 		}
@@ -46,7 +46,7 @@
 	<div class="pips" data-tone={resolvedTone}>
 		{#each Array(total) as _, i}
 			<span
-				class="pip"
+				class="orb"
 				class:is-lit={i < lit}
 				class:is-glow={glow && i < lit}
 				class:is-just-lit={justLit === i}
@@ -73,85 +73,114 @@
 	}
 
 	.pip-meter--sm .pips {
-		gap: 3px;
-	}
-	.pip-meter--md .pips {
 		gap: 4px;
 	}
+	.pip-meter--md .pips {
+		gap: 5px;
+	}
 
-	.pip {
+	/* --- Base orb (unlit / dim) --- */
+	.orb {
 		display: inline-block;
-		background: var(--pip-dim);
-		border: 1px solid var(--stone-6);
-		border-radius: 0;
+		border-radius: 50%;
+		background: radial-gradient(
+			circle at 35% 30%,
+			var(--orb-dim-hot) 0%,
+			var(--orb-dim-base) 45%,
+			var(--orb-dim-shadow) 100%
+		);
 		box-shadow:
-			inset 0 1px 0 rgba(255, 255, 255, 0.04),
-			inset 0 -1px 0 rgba(0, 0, 0, 0.6);
+			inset 0 -1px 2px rgba(0, 0, 0, 0.85),
+			inset 0 1px 1px rgba(255, 255, 255, 0.06),
+			0 1px 1px rgba(0, 0, 0, 0.85);
 		transition:
 			transform 180ms ease,
-			background 160ms ease,
-			box-shadow 160ms ease;
+			background 180ms ease,
+			box-shadow 180ms ease;
 	}
 
-	.pip-meter--sm .pip {
-		width: 6px;
-		height: 6px;
+	.pip-meter--sm .orb {
+		width: 11px;
+		height: 11px;
 	}
-	.pip-meter--md .pip {
-		width: 9px;
-		height: 9px;
+	.pip-meter--md .orb {
+		width: 14px;
+		height: 14px;
 	}
 
-	/* Lit colors per tone */
-	.pips[data-tone='good'] .pip.is-lit {
-		color: var(--pip-good);
-		background: linear-gradient(
-			180deg,
-			color-mix(in srgb, var(--pip-good) 75%, white 25%) 0%,
-			var(--pip-good) 55%,
-			color-mix(in srgb, var(--pip-good) 70%, black 30%) 100%
+	/* --- Lit orb (per-tone CSS vars resolve via [data-tone]) --- */
+	.pips[data-tone='good'] .orb.is-lit {
+		background: radial-gradient(
+			circle at 35% 28%,
+			var(--orb-good-hot) 0%,
+			var(--orb-good-base) 45%,
+			var(--orb-good-shadow) 100%
 		);
-		border-color: var(--stone-6);
 	}
-	.pips[data-tone='mid'] .pip.is-lit {
-		color: var(--pip-mid);
-		background: linear-gradient(
-			180deg,
-			color-mix(in srgb, var(--pip-mid) 75%, white 25%) 0%,
-			var(--pip-mid) 55%,
-			color-mix(in srgb, var(--pip-mid) 70%, black 30%) 100%
+	.pips[data-tone='mid'] .orb.is-lit {
+		background: radial-gradient(
+			circle at 35% 28%,
+			var(--orb-mid-hot) 0%,
+			var(--orb-mid-base) 45%,
+			var(--orb-mid-shadow) 100%
 		);
-		border-color: var(--stone-6);
 	}
-	.pips[data-tone='bad'] .pip.is-lit {
-		color: var(--pip-bad);
-		background: linear-gradient(
-			180deg,
-			color-mix(in srgb, var(--pip-bad) 75%, white 25%) 0%,
-			var(--pip-bad) 55%,
-			color-mix(in srgb, var(--pip-bad) 70%, black 30%) 100%
+	.pips[data-tone='bad'] .orb.is-lit {
+		background: radial-gradient(
+			circle at 35% 28%,
+			var(--orb-bad-hot) 0%,
+			var(--orb-bad-base) 45%,
+			var(--orb-bad-shadow) 100%
 		);
-		border-color: var(--stone-6);
 	}
 
-	.pip.is-lit.is-glow {
-		filter: drop-shadow(0 0 4px currentColor);
+	.orb.is-lit {
+		box-shadow:
+			inset 0 -1px 2px rgba(0, 0, 0, 0.55),
+			inset 0 1px 1px rgba(255, 255, 255, 0.55),
+			0 1px 1px rgba(0, 0, 0, 0.85);
 	}
 
-	@keyframes pipPop {
+	/* Color-matched outer halo when glowing. */
+	.pips[data-tone='good'] .orb.is-lit.is-glow {
+		box-shadow:
+			inset 0 -1px 2px rgba(0, 0, 0, 0.55),
+			inset 0 1px 1px rgba(255, 255, 255, 0.55),
+			var(--glow-orb-good),
+			0 1px 1px rgba(0, 0, 0, 0.85);
+	}
+	.pips[data-tone='mid'] .orb.is-lit.is-glow {
+		box-shadow:
+			inset 0 -1px 2px rgba(0, 0, 0, 0.55),
+			inset 0 1px 1px rgba(255, 255, 255, 0.55),
+			var(--glow-orb-mid),
+			0 1px 1px rgba(0, 0, 0, 0.85);
+	}
+	.pips[data-tone='bad'] .orb.is-lit.is-glow {
+		box-shadow:
+			inset 0 -1px 2px rgba(0, 0, 0, 0.55),
+			inset 0 1px 1px rgba(255, 255, 255, 0.55),
+			var(--glow-orb-bad),
+			0 1px 1px rgba(0, 0, 0, 0.85);
+	}
+
+	@keyframes orbPop {
 		0% {
-			transform: scale(0);
+			transform: scale(0.4);
+			filter: brightness(2);
 		}
 		60% {
-			transform: scale(1.2);
+			transform: scale(1.25);
+			filter: brightness(1.4);
 		}
 		100% {
 			transform: scale(1);
+			filter: brightness(1);
 		}
 	}
 
-	.pip.is-just-lit {
-		animation: pipPop 240ms cubic-bezier(0.16, 1, 0.3, 1) both;
+	.orb.is-just-lit {
+		animation: orbPop 300ms cubic-bezier(0.16, 1, 0.3, 1) both;
 	}
 
 	.pip-label {

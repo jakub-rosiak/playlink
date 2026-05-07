@@ -1,4 +1,4 @@
-/* Reusable chrome atoms — bevels, hairlines, noise, scrollbar, small-caps. */
+/* Reusable chrome atoms — bevels, hairlines, noise, texture, scrollbar, small-caps. */
 
 .bevel-out {
 	background: linear-gradient(180deg, var(--stone-4) 0%, var(--stone-2) 100%);
@@ -57,6 +57,68 @@
 	text-transform: uppercase;
 }
 
+/* Stone texture overlay (uses user-provided 1024x1024 PNG tile).
+   Apply on a relatively-positioned ancestor — overlay sits absolute, lighten-blends.
+   Two stacked layers offset against each other break the regular tile grid:
+   the top layer is rotated and shifted so its seams never align with the base.
+   A subtle blur softens any remaining edges; a radial mask vignettes the
+   panel corners so the texture fades into the bevel instead of hitting it
+   with a hard repeating boundary. */
+.stone-texture {
+	position: absolute;
+	/* Bleed outside the panel so blur edges aren't clipped at the bevel. */
+	inset: -10%;
+	pointer-events: none;
+	background-image: var(--texture-stone);
+	background-repeat: no-repeat;
+	background-size: var(--texture-stone-size);
+	background-position: center;
+	mix-blend-mode: lighten;
+	filter: brightness(var(--texture-stone-brightness, 1.18)) blur(var(--texture-stone-blur, 2.4px));
+	opacity: var(--texture-stone-opacity-panel);
+	/* Soft vignette so the texture fades into the bevel instead of a hard edge. */
+	-webkit-mask-image: radial-gradient(
+		ellipse 90% 85% at 50% 50%,
+		#000 25%,
+		rgba(0, 0, 0, 0.55) 65%,
+		transparent 100%
+	);
+	mask-image: radial-gradient(
+		ellipse 90% 85% at 50% 50%,
+		#000 25%,
+		rgba(0, 0, 0, 0.55) 65%,
+		transparent 100%
+	);
+	z-index: 1;
+}
+
+/* Page background variant: ONE tile scaled to cover the viewport, heavily
+   blurred. No repeat → no seams. The blur kills detail; what's left reads
+   as atmospheric stone darkness rather than a recognisable image. */
+.stone-texture--bg {
+	inset: -6%;
+	background-repeat: no-repeat;
+	background-size: cover;
+	background-position: center;
+	filter: brightness(0.95) blur(10px);
+	opacity: var(--texture-stone-opacity-bg);
+	-webkit-mask-image: radial-gradient(
+		ellipse 110% 95% at 50% 40%,
+		#000 0%,
+		rgba(0, 0, 0, 0.7) 55%,
+		transparent 100%
+	);
+	mask-image: radial-gradient(
+		ellipse 110% 95% at 50% 40%,
+		#000 0%,
+		rgba(0, 0, 0, 0.7) 55%,
+		transparent 100%
+	);
+}
+.stone-texture--list {
+	opacity: var(--texture-stone-opacity-list);
+}
+
 /* SVG turbulence noise overlay for stone grain. */
 .noise-overlay {
 	position: absolute;
@@ -64,7 +126,7 @@
 	pointer-events: none;
 	background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='200' height='200'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='2' stitchTiles='stitch'/><feColorMatrix values='0 0 0 0 0  0 0 0 0 0  0 0 0 0 0  0 0 0 0.55 0'/></filter><rect width='100%' height='100%' filter='url(%23n)'/></svg>");
 	background-size: 200px 200px;
-	opacity: 0.22;
+	opacity: 0.16;
 	mix-blend-mode: overlay;
 	z-index: 1;
 }
@@ -75,38 +137,89 @@
 	pointer-events: none;
 	background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='160' height='160'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='1.2' numOctaves='1' stitchTiles='stitch'/><feColorMatrix values='0 0 0 0 0  0 0 0 0 0  0 0 0 0 0  0 0 0 0.4 0'/></filter><rect width='100%' height='100%' filter='url(%23n)'/></svg>");
 	background-size: 160px 160px;
-	opacity: 0.14;
+	opacity: 0.1;
 	mix-blend-mode: overlay;
 	z-index: 1;
 }
 
-/* Themed scrollbar — gold-lit thumb in stone groove. */
+/* Etched vertical hairline divider (used between list columns). */
+.etched-divider {
+	display: block;
+	width: 1px;
+	height: 60%;
+	align-self: center;
+	background: linear-gradient(
+		180deg,
+		transparent 0%,
+		rgba(194, 157, 89, 0.18) 25%,
+		rgba(194, 157, 89, 0.28) 50%,
+		rgba(194, 157, 89, 0.18) 75%,
+		transparent 100%
+	);
+	box-shadow: 1px 0 0 rgba(0, 0, 0, 0.55);
+	pointer-events: none;
+}
+
+/* Themed scrollbar — gold-lit thumb in stone groove with ornament caps. */
 .scroll-d2 {
 	scrollbar-width: thin;
 	scrollbar-color: var(--gold-muted) var(--stone-1);
 }
 .scroll-d2::-webkit-scrollbar {
-	width: 12px;
-	height: 12px;
+	width: 14px;
+	height: 14px;
 }
 .scroll-d2::-webkit-scrollbar-track {
-	background: var(--stone-1);
+	background:
+		linear-gradient(90deg, rgba(0, 0, 0, 0.6) 0%, rgba(0, 0, 0, 0.25) 50%, rgba(0, 0, 0, 0.6) 100%),
+		var(--stone-1);
 	border-left: 1px solid var(--stone-5);
 	border-right: 1px solid var(--stone-5);
-	box-shadow: inset 0 0 8px rgba(0, 0, 0, 0.7);
+	box-shadow: inset 0 0 8px rgba(0, 0, 0, 0.85);
 }
 .scroll-d2::-webkit-scrollbar-thumb {
 	background:
-		linear-gradient(180deg, var(--gold-muted) 0%, var(--gold-dark) 100%),
+		linear-gradient(180deg, var(--gold-base) 0%, var(--gold-muted) 50%, var(--gold-dark) 100%),
 		var(--gold-muted);
-	border: 1px solid var(--stone-6);
+	border: 1px solid var(--stone-0);
 	box-shadow:
-		var(--glow-soft),
-		inset 0 1px 0 rgba(241, 207, 143, 0.3);
+		inset 0 1px 0 rgba(255, 232, 144, 0.55),
+		inset 0 -1px 0 rgba(0, 0, 0, 0.65),
+		inset 1px 0 0 rgba(0, 0, 0, 0.5),
+		inset -1px 0 0 rgba(0, 0, 0, 0.5),
+		0 0 6px rgba(227, 188, 116, 0.35);
+	background-clip: padding-box;
+	border-radius: 0;
 }
 .scroll-d2::-webkit-scrollbar-thumb:hover {
-	background: linear-gradient(180deg, var(--gold-base) 0%, var(--gold-muted) 100%);
-	box-shadow: var(--glow-mid);
+	background: linear-gradient(180deg, var(--gold-hot) 0%, var(--gold-base) 50%, var(--gold-muted) 100%);
+	box-shadow:
+		inset 0 1px 0 rgba(255, 232, 144, 0.85),
+		inset 0 -1px 0 rgba(0, 0, 0, 0.65),
+		0 0 10px rgba(255, 232, 144, 0.55);
+}
+.scroll-d2::-webkit-scrollbar-button:vertical:start,
+.scroll-d2::-webkit-scrollbar-button:vertical:end {
+	height: 16px;
+	background-color: var(--stone-2);
+	background-image:
+		url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 14 16'><path d='M7 4 L11 11 L3 11 Z' fill='%23e3bc74' stroke='%23000' stroke-width='0.5'/></svg>"),
+		linear-gradient(180deg, var(--stone-3), var(--stone-1));
+	background-repeat: no-repeat, no-repeat;
+	background-position: center, center;
+	background-size: 9px, 100% 100%;
+	border: 1px solid var(--stone-5);
+	box-shadow:
+		inset 0 1px 0 rgba(227, 188, 116, 0.18),
+		inset 0 -1px 0 rgba(0, 0, 0, 0.6);
+}
+.scroll-d2::-webkit-scrollbar-button:vertical:end {
+	background-image:
+		url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 14 16'><path d='M7 12 L11 5 L3 5 Z' fill='%23e3bc74' stroke='%23000' stroke-width='0.5'/></svg>"),
+		linear-gradient(180deg, var(--stone-3), var(--stone-1));
+	background-repeat: no-repeat, no-repeat;
+	background-position: center, center;
+	background-size: 9px, 100% 100%;
 }
 .scroll-d2::-webkit-scrollbar-corner {
 	background: var(--stone-1);
@@ -136,19 +249,19 @@
 @keyframes torchFlicker {
 	0%,
 	100% {
-		opacity: 0.22;
-	}
-	17% {
 		opacity: 0.18;
 	}
-	38% {
-		opacity: 0.24;
+	17% {
+		opacity: 0.14;
 	}
-	61% {
+	38% {
 		opacity: 0.2;
 	}
+	61% {
+		opacity: 0.16;
+	}
 	83% {
-		opacity: 0.23;
+		opacity: 0.19;
 	}
 }
 
@@ -172,10 +285,15 @@
 /* Etched gold text — used on display headings. */
 .etched-gold {
 	color: var(--gold-base);
+	background: linear-gradient(180deg, var(--gold-hot) 0%, var(--gold-base) 50%, var(--gold-dark) 100%);
+	-webkit-background-clip: text;
+	background-clip: text;
+	-webkit-text-fill-color: transparent;
 	text-shadow:
-		0 0 14px rgba(227, 188, 116, 0.22),
-		0 1px 0 rgba(0, 0, 0, 0.75),
-		0 -1px 0 rgba(255, 230, 160, 0.05);
+		0 1px 0 rgba(0, 0, 0, 0.85),
+		0 0 14px rgba(227, 188, 116, 0.32),
+		0 0 24px rgba(227, 188, 116, 0.18);
+	filter: drop-shadow(0 1px 0 rgba(0, 0, 0, 0.85));
 }
 
 .etched-bone {

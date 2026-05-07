@@ -21,7 +21,8 @@
 	.section-title {
 		display: flex;
 		align-items: baseline;
-		gap: 0.9rem;
+		flex-wrap: wrap;
+		gap: 0.5rem 0.9rem;
 		margin: 0 0 1rem 0;
 	}
 
@@ -34,6 +35,7 @@
 
 	.rule {
 		flex: 1;
+		min-width: 24px;
 		height: 1px;
 		background: var(--hair-gold);
 		align-self: center;
@@ -46,18 +48,19 @@
 		color: var(--bone-dim);
 		text-transform: uppercase;
 		flex-shrink: 0;
+		max-width: 100%;
 	}
 
 	.size-small .title {
-		font-size: 0.85rem;
+		font-size: clamp(0.78rem, 1.1vw, 0.9rem);
 		letter-spacing: var(--track-extra);
 	}
 	.size-normal .title {
-		font-size: 1.25rem;
+		font-size: clamp(1.05rem, 1.6vw, 1.3rem);
 		letter-spacing: var(--track-loose);
 	}
 	.size-large .title {
-		font-size: 1.75rem;
+		font-size: clamp(1.4rem, 2.4vw, 1.85rem);
 		letter-spacing: var(--track-loose);
 	}
 

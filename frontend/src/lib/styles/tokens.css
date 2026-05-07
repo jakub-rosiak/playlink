@@ -1,22 +1,24 @@
 /* Diablo 2 inspired design tokens for PlayLink. */
 :root {
 	/* --- Gold scale --- */
+	--gold-hot: #ffe890;
 	--gold-lit: #f1cf8f;
 	--gold-base: #e3bc74;
 	--gold-muted: #c29d59;
 	--gold-dark: #8a6c3a;
+	--gold-deep: #523c1c;
 	--gold-faint: rgba(227, 188, 116, 0.18);
 	--gold-glow: rgba(227, 188, 116, 0.38);
 
-	/* --- Stone scale (0=darkest, 7=lightest) --- */
-	--stone-0: #050403;
-	--stone-1: #0a0907;
-	--stone-2: #0e0c0a;
-	--stone-3: #14110d;
-	--stone-4: #1a1714;
-	--stone-5: #2a251c;
-	--stone-6: #3d3930;
-	--stone-7: #585141;
+	/* --- Stone scale (warmer brown, 0=darkest, 7=lightest) --- */
+	--stone-0: #050302;
+	--stone-1: #0a0805;
+	--stone-2: #110d09;
+	--stone-3: #18130d;
+	--stone-4: #1f1812;
+	--stone-5: #2c2218;
+	--stone-6: #3a2c1f;
+	--stone-7: #5c4530;
 
 	/* --- Bone (parchment text) --- */
 	--bone: #e4d8b8;
@@ -25,22 +27,79 @@
 	--bone-dim: #6a675d;
 	--bone-faint: #5c584a;
 
-	/* --- Pip / status colors --- */
-	--pip-good: #7fbf5c;
+	/* --- Pip / status colors (legacy) --- */
+	--pip-good: #6fbf3c;
 	--pip-mid: #e3a647;
 	--pip-bad: #c24545;
-	--pip-dim: #1d1a14;
+	--pip-dim: #100c08;
+
+	/* --- Orb gradient stops (used by PipMeter glowing orbs) --- */
+	/* Good (green) */
+	--orb-good-hot: #d8ffaa;
+	--orb-good-base: #3ecb1a;
+	--orb-good-shadow: #0a3a07;
+	--orb-good-glow-rgb: 70, 220, 60;
+	/* Mid (amber) */
+	--orb-mid-hot: #ffe6a0;
+	--orb-mid-base: #e89a1f;
+	--orb-mid-shadow: #4a2906;
+	--orb-mid-glow-rgb: 232, 154, 31;
+	/* Bad (red) */
+	--orb-bad-hot: #ffc4b8;
+	--orb-bad-base: #c8262a;
+	--orb-bad-shadow: #3a0606;
+	--orb-bad-glow-rgb: 220, 60, 60;
+	/* Dim (unlit) */
+	--orb-dim-hot: #2a2218;
+	--orb-dim-base: #16110b;
+	--orb-dim-shadow: #050402;
 
 	/* --- Blood / danger --- */
 	--blood: #b53636;
 	--blood-bright: #d35858;
 	--blood-faint: rgba(181, 54, 54, 0.18);
 
-	/* --- Page surfaces --- */
-	--bg-page: #07060a;
-	--bg-frame: #14110d;
-	--bg-panel: #0c0a08;
-	--bg-deep: #050403;
+	/* --- Page surfaces ---
+	   Warm dark brown (NOT black) so panels and ornaments read against
+	   atmosphere rather than a void. Matches D2R "stone wall" backdrop. */
+	--bg-page: #14100a;
+	--bg-frame: #1a140e;
+	--bg-panel: #0c0805;
+	--bg-deep: #07050a;
+
+	/* --- Stone panel (the *inside* of an InnerPanel) ---
+	   For text-heavy panels (game list, lobby chat) D2R uses a *dark* stone
+	   surface so light type stays legible — but it is warm dark brown, not
+	   black. The mid value is the dominant tone; light is the upper-third
+	   highlight; edge is the corners; shadow is the absolute darkest spots. */
+	--stone-panel-light: #3a312a;
+	--stone-panel-mid: #261f19;
+	--stone-panel-edge: #18120e;
+	--stone-panel-shadow: #0e0a07;
+
+	/* --- Bronze frame (the metal ring around each panel) ---
+	   Aged bronze: warm brown undertones, not bright gold. */
+	--bronze-mid: #5a4626;
+	--bronze-high: #9a7a3a;
+	--bronze-low: #2e2114;
+	--gold-hairline: #c8a04a;
+	--bronze-rivet-hot: #e6c478;
+	--bronze-rivet-mid: #8a6a3a;
+	--bronze-rivet-shadow: #1a0e04;
+
+	/* --- Stone texture (user-provided 1024x1024 tile) ---
+	   The PNG is intentionally dark (subtle ornamental veining). We layer it
+	   with mix-blend-mode: lighten so the *lighter* veins emerge from the
+	   nearly-black panel backgrounds. We also blur the layer slightly to
+	   soften the tile seams so the repetition reads as one continuous slab. */
+	--texture-stone: url('/textures/stone-tile.png');
+	/* Big enough that on most panels only ~1 tile is visible — kills the seam. */
+	--texture-stone-size: 1400px;
+	--texture-stone-opacity-bg: 0.5;
+	--texture-stone-opacity-panel: 0.75;
+	--texture-stone-opacity-list: 0.4;
+	--texture-stone-brightness: 1.18;
+	--texture-stone-blur: 2.4px;
 
 	/* --- Borders --- */
 	--border-stone: 1px solid var(--stone-5);
@@ -68,6 +127,17 @@
 	--glow-mid: 0 0 18px rgba(227, 188, 116, 0.28);
 	--glow-strong: 0 0 28px rgba(227, 188, 116, 0.45);
 
+	/* --- Orb glows (per tone) --- */
+	--glow-orb-good:
+		0 0 5px rgba(70, 220, 60, 0.85),
+		0 0 12px rgba(70, 220, 60, 0.45);
+	--glow-orb-mid:
+		0 0 5px rgba(232, 154, 31, 0.85),
+		0 0 12px rgba(232, 154, 31, 0.45);
+	--glow-orb-bad:
+		0 0 5px rgba(220, 60, 60, 0.85),
+		0 0 12px rgba(220, 60, 60, 0.45);
+
 	/* --- Shadow / drops --- */
 	--shadow-panel:
 		0 12px 36px rgba(0, 0, 0, 0.85),
@@ -91,15 +161,15 @@
 		transparent 100%
 	);
 
-	/* --- Type scale --- */
-	--fs-display: 5rem;
-	--fs-h1: 2.5rem;
-	--fs-h2: 1.6rem;
-	--fs-h3: 1.1rem;
-	--fs-body: 0.95rem;
-	--fs-small: 0.85rem;
-	--fs-label: 0.72rem;
-	--fs-tiny: 0.62rem;
+	/* --- Type scale (responsive: scales gently with viewport, ~12% bump on desktop) --- */
+	--fs-display: clamp(3rem, 6vw, 5.25rem);
+	--fs-h1: clamp(1.9rem, 3.5vw, 2.6rem);
+	--fs-h2: clamp(1.35rem, 2vw, 1.75rem);
+	--fs-h3: clamp(1rem, 1.4vw, 1.2rem);
+	--fs-body: clamp(0.95rem, 1.05vw, 1.08rem);
+	--fs-small: clamp(0.85rem, 0.95vw, 0.96rem);
+	--fs-label: clamp(0.78rem, 0.85vw, 0.84rem);
+	--fs-tiny: clamp(0.7rem, 0.75vw, 0.75rem);
 
 	/* --- Spacing --- */
 	--sp-1: 4px;
@@ -119,15 +189,15 @@
 	--track-extra: 0.28em;
 
 	/* --- Fonts --- */
-	--font-display: 'Exocet', 'Times New Roman', serif;
-	--font-body: 'Exocet', 'Times New Roman', serif;
+	--font-display: 'Exocet', 'Cinzel', 'Trajan Pro', 'Times New Roman', serif;
+	--font-body: 'Marcellus', 'Cinzel', 'Trajan Pro', 'Times New Roman', serif;
 	--font-mono: ui-monospace, 'SF Mono', Menlo, Consolas, monospace;
 
 	/* --- Backwards-compatible aliases (keep old code working) --- */
 	--font-color: var(--bone);
 	--bg-color: var(--bg-page);
 	--link-color: var(--gold-base);
-	--font-main: 'Exocet';
+	--font-main: var(--font-display);
 
 	/* --- Z-index scale --- */
 	--z-frame: 0;

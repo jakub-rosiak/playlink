@@ -7,9 +7,11 @@
 </script>
 
 <div class="page-frame anim-frame-in">
-	<!-- Outer dark stone backdrop with grain -->
+	<!-- Stone-wall backdrop: warm dark brown + subtle quatrefoil pattern + soft torch glow.
+	     Replaces the previous black void: panels sit ON the wall, not float in space. -->
 	<div class="frame-back" aria-hidden="true">
-		<div class="noise-overlay torch-flicker"></div>
+		<div class="wall-pattern"></div>
+		<div class="torch-glow torch-flicker"></div>
 		<div class="vignette"></div>
 	</div>
 
@@ -113,9 +115,10 @@
 		position: relative;
 		min-height: 100vh;
 		padding: clamp(24px, 3vw, 48px);
+		/* Warm dark brown stone wall — never plain black. */
 		background:
-			radial-gradient(ellipse at 50% 0%, #1a1714 0%, #0a0907 55%, #050403 100%),
-			#050403;
+			radial-gradient(ellipse at 50% 30%, #251c12 0%, #15100a 60%, #0a0705 100%),
+			#0a0705;
 		overflow: hidden;
 	}
 
@@ -128,13 +131,45 @@
 	.vignette {
 		position: absolute;
 		inset: 0;
+		/* Lighter vignette — only darkens extreme corners, not the panel area. */
 		background: radial-gradient(
-			ellipse at 50% 50%,
-			transparent 30%,
-			rgba(0, 0, 0, 0.55) 75%,
-			rgba(0, 0, 0, 0.85) 100%
+			ellipse at 50% 45%,
+			transparent 50%,
+			rgba(0, 0, 0, 0.35) 85%,
+			rgba(0, 0, 0, 0.6) 100%
 		);
 		pointer-events: none;
+		z-index: 2;
+	}
+
+	/* Warm gold "torch" glow — atmosphere without relying on tiled imagery.
+	   Subtler than before; the wall pattern carries most of the texture. */
+	.torch-glow {
+		position: absolute;
+		inset: 0;
+		pointer-events: none;
+		z-index: 1;
+		background:
+			radial-gradient(
+				ellipse 70% 45% at 50% 0%,
+				rgba(227, 188, 116, 0.1) 0%,
+				rgba(227, 188, 116, 0.04) 40%,
+				transparent 80%
+			);
+	}
+
+	/* Quatrefoil / cross repeat pattern, 80px tile, very low contrast.
+	   Inline SVG so there's no asset request. The pattern lives on top of
+	   the page-frame's brown gradient — it adds "carved wallpaper" feel. */
+	.wall-pattern {
+		position: absolute;
+		inset: 0;
+		pointer-events: none;
+		z-index: 0;
+		opacity: 0.55;
+		background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='96' height='96' viewBox='0 0 96 96'><g fill='none' stroke='%23362617' stroke-width='1' opacity='0.9'><path d='M48 18 C 56 18 60 22 60 30 C 60 38 56 42 48 42 C 40 42 36 38 36 30 C 36 22 40 18 48 18 Z'/><path d='M48 54 C 56 54 60 58 60 66 C 60 74 56 78 48 78 C 40 78 36 74 36 66 C 36 58 40 54 48 54 Z'/><path d='M0 48 L96 48' stroke-opacity='0.18'/><path d='M48 0 L48 96' stroke-opacity='0.18'/><circle cx='0' cy='0' r='2' fill='%23362617' stroke='none'/><circle cx='96' cy='0' r='2' fill='%23362617' stroke='none'/><circle cx='0' cy='96' r='2' fill='%23362617' stroke='none'/><circle cx='96' cy='96' r='2' fill='%23362617' stroke='none'/></g></svg>");
+		background-size: 96px 96px;
+		mix-blend-mode: screen;
 	}
 
 	.frame-chrome {

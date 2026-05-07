@@ -31,6 +31,17 @@
 		align-items: stretch;
 	}
 
+	@media (max-width: 600px) {
+		.tabs-row {
+			grid-auto-columns: minmax(min-content, 1fr);
+			overflow-x: auto;
+			scrollbar-width: none;
+		}
+		.tabs-row::-webkit-scrollbar {
+			display: none;
+		}
+	}
+
 	.tabs-rule {
 		display: block;
 		height: 1px;

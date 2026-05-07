@@ -70,24 +70,46 @@ textarea {
 	color: var(--stone-0);
 }
 
-/* --- Cursors (Diablo II set) ---
-   Cursor files (/cursor/*.cur, *.ani) are not bundled in the repo. The lines
-   below stay commented until matching files land in /static/cursor/. Browsers
-   would otherwise flag 404s for every interaction. */
-/*
-html, body { cursor: url('/cursor/normal.cur'), auto; }
-body.waiting, body.waiting * { cursor: url('/cursor/busy.ani'), wait !important; }
-.help, abbr, [title], a[href], button, [role='button'], [role='tab'] {
+/* --- Cursors (Diablo II set) --- */
+html,
+body {
+	cursor: url('/cursor/normal.cur'), auto;
+}
+body.waiting,
+body.waiting * {
+	cursor: url('/cursor/busy.ani'), wait !important;
+}
+.help,
+abbr,
+[title],
+a[href],
+button,
+[role='button'],
+[role='tab'] {
 	cursor: url('/cursor/help.cur'), help;
 }
-p, h1, h2, h3, h4, h5, h6, span, li, td, th, label {
+p,
+h1,
+h2,
+h3,
+h4,
+h5,
+h6,
+span,
+li,
+td,
+th,
+label {
 	cursor: url('/cursor/text.cur'), text;
 }
-input[type='text'], input[type='email'], input[type='password'],
-input[type='number'], input[type='search'], textarea {
+input[type='text'],
+input[type='email'],
+input[type='password'],
+input[type='number'],
+input[type='search'],
+textarea {
 	cursor: url('/cursor/write.cur'), text;
 }
-*/
 
 /* --- Default heading reset (we'll style per-component) --- */
 h1,

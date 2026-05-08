@@ -168,6 +168,39 @@
 							/>
 						</div>
 
+						<div class="form-group">
+							<label for="description">Description (optional)</label>
+							<textarea
+								id="description"
+								name="description"
+								maxlength="500"
+								rows="3"
+								placeholder="Short note about the session"
+							></textarea>
+						</div>
+
+						<div class="form-group">
+							<label for="communicator_link">Communicator Link (optional)</label>
+							<input
+								type="url"
+								id="communicator_link"
+								name="communicator_link"
+								maxlength="500"
+								placeholder="https://discord.gg/..."
+							/>
+						</div>
+
+						<div class="form-group">
+							<label for="requirements">Requirements (optional)</label>
+							<textarea
+								id="requirements"
+								name="requirements"
+								maxlength="1000"
+								rows="3"
+								placeholder="Game version, mods, network setup..."
+							></textarea>
+						</div>
+
 						<button type="submit" class="btn btn-primary" style="margin-top: 1rem;"
 							>BROADCAST</button
 						>
@@ -643,7 +676,8 @@
 	}
 
 	.form-group input,
-	.form-group select {
+	.form-group select,
+	.form-group textarea {
 		width: 100%;
 		background: #141415;
 		border: 1px solid #28251e;
@@ -654,8 +688,14 @@
 		font-size: 0.9rem;
 	}
 
+	.form-group textarea {
+		resize: vertical;
+		min-height: 3rem;
+	}
+
 	.form-group input:focus,
-	.form-group select:focus {
+	.form-group select:focus,
+	.form-group textarea:focus {
 		outline: none;
 		border-color: #e3bc74;
 	}

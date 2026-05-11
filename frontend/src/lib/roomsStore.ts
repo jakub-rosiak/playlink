@@ -8,7 +8,14 @@ export interface RoomSummary {
 	players_active: number;
 	players_max: number;
 	member_addresses: string[];
+	description: string | null;
+	communicator_link: string | null;
+	requirements: string | null;
 	expires_at: string;
+}
+
+function isNullableString(value: unknown): value is string | null {
+	return value === null || typeof value === 'string';
 }
 
 function isRoomSummary(value: unknown): value is RoomSummary {
@@ -24,6 +31,9 @@ function isRoomSummary(value: unknown): value is RoomSummary {
 		typeof room.players_active === 'number' &&
 		typeof room.players_max === 'number' &&
 		Array.isArray(room.member_addresses) &&
+		isNullableString(room.description) &&
+		isNullableString(room.communicator_link) &&
+		isNullableString(room.requirements) &&
 		typeof room.expires_at === 'string'
 	);
 }

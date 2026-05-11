@@ -64,12 +64,19 @@ export const actions: Actions = {
 		const name = data.get('name');
 		const game = data.get('game');
 		const players_max = data.get('players_max');
+		const description = data.get('description');
+		const communicator_link = data.get('communicator_link');
+		const requirements = data.get('requirements');
 
 		if (!name || !game || !players_max) {
 			return fail(400, { error: 'Missing required fields' });
 		}
 
-		console.log('creating room', name, game, players_max);
+		const optionalText = (value: FormDataEntryValue | null): string | null => {
+			if (typeof value !== 'string') return null;
+			const trimmed = value.trim();
+			return trimmed.length > 0 ? trimmed : null;
+		};
 
 		try {
 			const baseUrl = backendBase();
@@ -82,7 +89,10 @@ export const actions: Actions = {
 				body: JSON.stringify({
 					name: name.toString(),
 					game: game.toString(),
-					players_max: parseInt(players_max.toString(), 10)
+					players_max: parseInt(players_max.toString(), 10),
+					description: optionalText(description),
+					communicator_link: optionalText(communicator_link),
+					requirements: optionalText(requirements)
 				})
 			});
 

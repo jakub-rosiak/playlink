@@ -449,6 +449,7 @@ def get_room(room_name: str, session: SessionDep):
         "description": room.description,
         "communicator_link": room.communicator_link,
         "requirements": room.requirements,
+        "created_by": room.created_by,
         "expires_at": _iso(room.expires_at),
         "event": _serialize_event_state(session, room),
     }

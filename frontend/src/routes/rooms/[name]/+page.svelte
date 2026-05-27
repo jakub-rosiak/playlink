@@ -1,24 +1,43 @@
 <script lang="ts">
 	import { onDestroy, onMount, tick } from 'svelte';
 	import type { PageData } from './$types';
-	import { createChatStore, type ChatMessage, type ChatStore } from '$lib/chatStore';
+	import {
+		createChatStore,
+		type ChatMessage,
+		type ChatStore,
+		type RoomEventState
+	} from '$lib/chatStore';
+	import RoomEvent from '$lib/components/RoomEvent.svelte';
 
 	let { data }: { data: PageData } = $props();
 
 	let chat = $state<ChatStore | null>(null);
 	let messages = $state<ChatMessage[]>([]);
+	let event = $state<RoomEventState | null>(null);
 	let input = $state('');
 	let scroller: HTMLDivElement | null = $state(null);
 
+	const members = $derived(
+		data.memberAddresses.map((address) => ({ address }))
+	);
+
 	onMount(() => {
-		const store = createChatStore(data.roomName, data.token);
+		const store = createChatStore(data.roomName, data.token, {
+			initialEvent: data.event
+		});
 		chat = store;
-		const unsubscribe = store.subscribe(async (m) => {
+		const unsubMessages = store.messages.subscribe(async (m) => {
 			messages = m;
 			await tick();
 			if (scroller) scroller.scrollTop = scroller.scrollHeight;
 		});
-		return unsubscribe;
+		const unsubEvent = store.event.subscribe((e) => {
+			event = e;
+		});
+		return () => {
+			unsubMessages();
+			unsubEvent();
+		};
 	});
 
 	onDestroy(() => {
@@ -84,6 +103,14 @@
 			</div>
 		{/if}
 	</header>
+
+	<RoomEvent
+		{event}
+		isCreator={data.isCreator}
+		isMember={true}
+		viewerAddress={data.address}
+		{members}
+	/>
 
 	<div class="chat" bind:this={scroller}>
 		{#if messages.length === 0}
@@ -216,8 +243,8 @@
 
 	.chat {
 		flex: 1;
-		min-height: 50vh;
-		max-height: 65vh;
+		min-height: 40vh;
+		max-height: 55vh;
 		overflow-y: auto;
 		padding: 1rem;
 		background: rgba(255, 255, 255, 0.03);

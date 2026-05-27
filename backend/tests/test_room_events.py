@@ -65,6 +65,14 @@ def _future_iso(minutes: int) -> str:
     return (datetime.now(UTC) + timedelta(minutes=minutes)).isoformat()
 
 
+def _event_body(start_minutes: int, duration_minutes: int = 120) -> dict[str, str]:
+    """Standard PUT /event body with sensible defaults."""
+    return {
+        "starts_at": _future_iso(start_minutes),
+        "ends_at": _future_iso(start_minutes + duration_minutes),
+    }
+
+
 # ---------- PUT /rooms/{name}/event ----------
 
 
@@ -73,7 +81,7 @@ def test_creator_can_schedule_event(client: TestClient, session: Session):
 
     res = client.put(
         "/rooms/lobby-1/event",
-        json={"starts_at": _future_iso(30)},
+        json=_event_body(30),
         headers=_auth_headers("0xCreator"),
     )
     assert res.status_code == 200
@@ -91,7 +99,7 @@ def test_non_creator_cannot_schedule_event(client: TestClient, session: Session)
 
     res = client.put(
         "/rooms/lobby-1/event",
-        json={"starts_at": _future_iso(30)},
+        json=_event_body(30),
         headers=_auth_headers("0xMember"),
     )
     assert res.status_code == 403
@@ -103,7 +111,7 @@ def test_outsider_cannot_schedule_event(client: TestClient, session: Session):
     # Outsider isn't even in the user table; treat like an unknown JWT subject.
     res = client.put(
         "/rooms/lobby-1/event",
-        json={"starts_at": _future_iso(30)},
+        json=_event_body(30),
         headers=_auth_headers("0xOutsider"),
     )
     assert res.status_code == 403
@@ -112,33 +120,71 @@ def test_outsider_cannot_schedule_event(client: TestClient, session: Session):
 def test_schedule_event_rejects_past_start(client: TestClient, session: Session):
     _seed_room(session, "lobby-1", ["0xCreator"])
 
-    past = (datetime.now(UTC) - timedelta(minutes=5)).isoformat()
+    body = {
+        "starts_at": (datetime.now(UTC) - timedelta(minutes=5)).isoformat(),
+        "ends_at": _future_iso(60),
+    }
     res = client.put(
         "/rooms/lobby-1/event",
-        json={"starts_at": past},
+        json=body,
         headers=_auth_headers("0xCreator"),
     )
     assert res.status_code == 400
     assert "future" in res.json()["detail"]
 
 
-def test_schedule_event_rejects_after_room_expiry(client: TestClient, session: Session):
-    _seed_room(session, "lobby-1", ["0xCreator"], expires_in_minutes=10)
+def test_schedule_event_extends_room_expiry_past_event_end(
+    client: TestClient, session: Session
+):
+    """An event scheduled past the current room.expires_at pushes the room's
+    expiry forward (with a grace period) so the room stays alive for the
+    whole session.
+    """
+    room = _seed_room(session, "lobby-1", ["0xCreator"], expires_in_minutes=10)
+    original_expiry = room.expires_at
 
-    # 30 minutes ahead, but room only lives for 10.
+    # Event ends 30 + 120 = 150 min from now, well past the 10-minute room.
     res = client.put(
         "/rooms/lobby-1/event",
-        json={"starts_at": _future_iso(30)},
+        json=_event_body(30),
+        headers=_auth_headers("0xCreator"),
+    )
+    assert res.status_code == 200
+
+    session.refresh(room)
+    new_expiry = room.expires_at
+    if new_expiry.tzinfo is None:
+        new_expiry = new_expiry.replace(tzinfo=UTC)
+    if original_expiry.tzinfo is None:
+        original_expiry = original_expiry.replace(tzinfo=UTC)
+    assert new_expiry > original_expiry
+    # Should be at least ends_at (start + 120 min).
+    ends_at = datetime.now(UTC) + timedelta(minutes=30 + 120)
+    assert new_expiry >= ends_at
+
+
+def test_schedule_event_rejects_ends_before_starts(
+    client: TestClient, session: Session
+):
+    _seed_room(session, "lobby-1", ["0xCreator"])
+
+    body = {
+        "starts_at": _future_iso(60),
+        "ends_at": _future_iso(30),  # before start
+    }
+    res = client.put(
+        "/rooms/lobby-1/event",
+        json=body,
         headers=_auth_headers("0xCreator"),
     )
     assert res.status_code == 400
-    assert "expires" in res.json()["detail"]
+    assert "ends_at" in res.json()["detail"]
 
 
 def test_schedule_event_for_missing_room_returns_404(client: TestClient):
     res = client.put(
         "/rooms/no-such-room/event",
-        json={"starts_at": _future_iso(30)},
+        json=_event_body(30),
         headers=_auth_headers("0xCreator"),
     )
     assert res.status_code == 404
@@ -149,7 +195,7 @@ def test_schedule_event_is_idempotent_upsert(client: TestClient, session: Sessio
 
     res = client.put(
         "/rooms/lobby-1/event",
-        json={"starts_at": _future_iso(30)},
+        json=_event_body(30),
         headers=_auth_headers("0xCreator"),
     )
     assert res.status_code == 200
@@ -157,7 +203,7 @@ def test_schedule_event_is_idempotent_upsert(client: TestClient, session: Sessio
 
     res = client.put(
         "/rooms/lobby-1/event",
-        json={"starts_at": _future_iso(45)},
+        json=_event_body(45),
         headers=_auth_headers("0xCreator"),
     )
     assert res.status_code == 200
@@ -176,7 +222,7 @@ def test_schedule_event_creator_match_is_case_insensitive(
     _seed_room(session, "lobby-1", ["0xAbC123"])
     res = client.put(
         "/rooms/lobby-1/event",
-        json={"starts_at": _future_iso(30)},
+        json=_event_body(30),
         headers=_auth_headers("0xabc123"),
     )
     assert res.status_code == 200
@@ -194,10 +240,9 @@ def test_get_event_returns_404_when_unscheduled(client: TestClient, session: Ses
 def test_get_event_is_public_and_includes_rsvps(client: TestClient, session: Session):
     _seed_room(session, "lobby-1", ["0xCreator", "0xMember"])
 
-    starts_at = _future_iso(30)
     client.put(
         "/rooms/lobby-1/event",
-        json={"starts_at": starts_at},
+        json=_event_body(30),
         headers=_auth_headers("0xCreator"),
     )
     client.put(
@@ -222,7 +267,7 @@ def test_get_room_includes_event_field(client: TestClient, session: Session):
 
     client.put(
         "/rooms/lobby-1/event",
-        json={"starts_at": _future_iso(30)},
+        json=_event_body(30),
         headers=_auth_headers("0xCreator"),
     )
     res = client.get("/rooms/lobby-1")
@@ -241,7 +286,7 @@ def test_member_can_set_each_rsvp_status(
     _seed_room(session, "lobby-1", ["0xCreator", "0xMember"])
     client.put(
         "/rooms/lobby-1/event",
-        json={"starts_at": _future_iso(30)},
+        json=_event_body(30),
         headers=_auth_headers("0xCreator"),
     )
 
@@ -258,7 +303,7 @@ def test_rsvp_overwrites_previous_status(client: TestClient, session: Session):
     _seed_room(session, "lobby-1", ["0xCreator", "0xMember"])
     client.put(
         "/rooms/lobby-1/event",
-        json={"starts_at": _future_iso(30)},
+        json=_event_body(30),
         headers=_auth_headers("0xCreator"),
     )
 
@@ -275,7 +320,7 @@ def test_outsider_cannot_rsvp(client: TestClient, session: Session):
     _seed_room(session, "lobby-1", ["0xCreator"])
     client.put(
         "/rooms/lobby-1/event",
-        json={"starts_at": _future_iso(30)},
+        json=_event_body(30),
         headers=_auth_headers("0xCreator"),
     )
 
@@ -304,7 +349,7 @@ def test_rsvp_rejects_invalid_status(client: TestClient, session: Session):
     _seed_room(session, "lobby-1", ["0xCreator"])
     client.put(
         "/rooms/lobby-1/event",
-        json={"starts_at": _future_iso(30)},
+        json=_event_body(30),
         headers=_auth_headers("0xCreator"),
     )
     res = client.put(
@@ -324,7 +369,7 @@ def test_creator_can_cancel_event_and_rsvps_are_cleared(
     _seed_room(session, "lobby-1", ["0xCreator", "0xMember"])
     client.put(
         "/rooms/lobby-1/event",
-        json={"starts_at": _future_iso(30)},
+        json=_event_body(30),
         headers=_auth_headers("0xCreator"),
     )
     client.put(
@@ -345,7 +390,7 @@ def test_non_creator_cannot_cancel_event(client: TestClient, session: Session):
     _seed_room(session, "lobby-1", ["0xCreator", "0xMember"])
     client.put(
         "/rooms/lobby-1/event",
-        json={"starts_at": _future_iso(30)},
+        json=_event_body(30),
         headers=_auth_headers("0xCreator"),
     )
 
@@ -366,7 +411,7 @@ def test_leave_room_removes_users_rsvp(client: TestClient, session: Session):
     _seed_room(session, "lobby-1", ["0xCreator", "0xMember"])
     client.put(
         "/rooms/lobby-1/event",
-        json={"starts_at": _future_iso(30)},
+        json=_event_body(30),
         headers=_auth_headers("0xCreator"),
     )
     client.put(
@@ -393,7 +438,7 @@ def test_expired_room_is_pruned_with_event_and_rsvps(
     _seed_room(session, "lobby-1", ["0xCreator", "0xMember"], expires_in_minutes=60)
     client.put(
         "/rooms/lobby-1/event",
-        json={"starts_at": _future_iso(30)},
+        json=_event_body(30),
         headers=_auth_headers("0xCreator"),
     )
     client.put(
@@ -442,7 +487,7 @@ def test_schedule_event_broadcasts_event_update(client: TestClient, session: Ses
 
         client.put(
             "/rooms/lobby-1/event",
-            json={"starts_at": _future_iso(30)},
+            json=_event_body(30),
             headers=_auth_headers("0xCreator"),
         )
 
@@ -457,7 +502,7 @@ def test_rsvp_update_broadcast(client: TestClient, session: Session):
     _seed_room(session, "lobby-1", ["0xCreator", "0xMember"])
     client.put(
         "/rooms/lobby-1/event",
-        json={"starts_at": _future_iso(30)},
+        json=_event_body(30),
         headers=_auth_headers("0xCreator"),
     )
     creator_t = _mint_token("0xCreator")
@@ -487,7 +532,7 @@ def test_leave_with_rsvp_broadcasts_event_update(client: TestClient, session: Se
     _seed_room(session, "lobby-1", ["0xCreator", "0xMember"])
     client.put(
         "/rooms/lobby-1/event",
-        json={"starts_at": _future_iso(30)},
+        json=_event_body(30),
         headers=_auth_headers("0xCreator"),
     )
     client.put(
@@ -511,7 +556,7 @@ def test_cancel_event_broadcasts_null_event(client: TestClient, session: Session
     _seed_room(session, "lobby-1", ["0xCreator", "0xMember"])
     client.put(
         "/rooms/lobby-1/event",
-        json={"starts_at": _future_iso(30)},
+        json=_event_body(30),
         headers=_auth_headers("0xCreator"),
     )
 
@@ -566,7 +611,7 @@ def test_event_payload_shape(client: TestClient, session: Session):
     _seed_room(session, "lobby-1", ["0xCreator", "0xMember"])
     client.put(
         "/rooms/lobby-1/event",
-        json={"starts_at": _future_iso(30)},
+        json=_event_body(30),
         headers=_auth_headers("0xCreator"),
     )
     client.put(
@@ -578,6 +623,7 @@ def test_event_payload_shape(client: TestClient, session: Session):
     body = client.get("/rooms/lobby-1/event").json()
     assert set(body.keys()) == {
         "starts_at",
+        "ends_at",
         "created_by",
         "created_at",
         "updated_at",
@@ -592,7 +638,7 @@ def test_event_payload_shape(client: TestClient, session: Session):
         ws.receive_json()  # history
         client.put(
             "/rooms/lobby-1/event",
-            json={"starts_at": _future_iso(45)},
+            json=_event_body(45),
             headers=_auth_headers("0xCreator"),
         )
         frame = ws.receive_json()
@@ -600,6 +646,7 @@ def test_event_payload_shape(client: TestClient, session: Session):
         assert set(frame.keys()) == {"type", "event"}
         assert set(frame["event"].keys()) == {
             "starts_at",
+            "ends_at",
             "created_by",
             "created_at",
             "updated_at",
@@ -613,7 +660,7 @@ def test_rest_and_ws_event_payloads_match(client: TestClient, session: Session):
     _seed_room(session, "lobby-1", ["0xCreator", "0xMember"])
     client.put(
         "/rooms/lobby-1/event",
-        json={"starts_at": _future_iso(30)},
+        json=_event_body(30),
         headers=_auth_headers("0xCreator"),
     )
 
@@ -628,7 +675,7 @@ def test_rest_and_ws_event_payloads_match(client: TestClient, session: Session):
         ws.receive_json()  # the rsvp_update frame, drop it
         client.put(
             "/rooms/lobby-1/event",
-            json={"starts_at": _future_iso(45)},
+            json=_event_body(45),
             headers=_auth_headers("0xCreator"),
         )
         ws_frame = ws.receive_json()

@@ -64,6 +64,7 @@ class RoomEvent(SQLModel, table=True):
         ),
     )
     starts_at: datetime = Field(index=True)
+    ends_at: datetime = Field(index=True)
     created_by: str = Field(index=True)  # identity_address of room creator
     created_at: datetime = Field(default_factory=lambda: datetime.now(UTC))
     updated_at: datetime = Field(default_factory=lambda: datetime.now(UTC))

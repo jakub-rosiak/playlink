@@ -67,9 +67,10 @@ class CreateRoomRequest(BaseModel):
 
 
 class ScheduleEventRequest(BaseModel):
-    """Body for `PUT /rooms/{name}/event`. `starts_at` must be in the future."""
+    """Body for `PUT /rooms/{name}/event`. Both timestamps must be in the future."""
 
     starts_at: datetime
+    ends_at: datetime
 
 
 class SetRsvpRequest(BaseModel):
@@ -222,6 +223,7 @@ def _serialize_event_state(session: Session, room: Room) -> dict | None:
 
     return {
         "starts_at": _iso(event.starts_at),
+        "ends_at": _iso(event.ends_at),
         "created_by": event.created_by,
         "created_at": _iso(event.created_at),
         "updated_at": _iso(event.updated_at),
@@ -446,6 +448,10 @@ def get_room(room_name: str, session: SessionDep):
         "players_max": room.players_max,
         "players_active": len(room.members),
         "member_addresses": [m.identity_address for m in room.members],
+        "members": [
+            {"address": m.identity_address, "username": m.username}
+            for m in room.members
+        ],
         "description": room.description,
         "communicator_link": room.communicator_link,
         "requirements": room.requirements,
@@ -621,7 +627,9 @@ async def schedule_room_event(
     """Create or replace the scheduled event for a room.
 
     Only the room creator may schedule. `starts_at` must lie in the future
-    and before the room's `expires_at` so the event cannot outlive its room.
+    and `ends_at` must come after `starts_at`. The room's `expires_at` is
+    automatically extended past `ends_at` so the room stays alive until the
+    event finishes (plus a small grace period for stragglers).
     """
     room = session.exec(select(Room).where(Room.name == room_name)).first()
     if not room:
@@ -633,34 +641,48 @@ async def schedule_room_event(
         )
 
     starts_at = body.starts_at
+    ends_at = body.ends_at
     if starts_at.tzinfo is None:
         starts_at = starts_at.replace(tzinfo=UTC)
     else:
         starts_at = starts_at.astimezone(UTC)
+    if ends_at.tzinfo is None:
+        ends_at = ends_at.replace(tzinfo=UTC)
+    else:
+        ends_at = ends_at.astimezone(UTC)
 
     now = datetime.now(UTC)
     if starts_at <= now:
         raise HTTPException(status_code=400, detail="starts_at must be in the future")
+    if ends_at <= starts_at:
+        raise HTTPException(
+            status_code=400, detail="ends_at must be after starts_at"
+        )
 
+    # Keep the room alive for the entire event plus a 30-minute grace period
+    # so members don't get prune'd out mid-session.
+    grace = timedelta(minutes=30)
     expires_at = room.expires_at
     if expires_at.tzinfo is None:
         expires_at = expires_at.replace(tzinfo=UTC)
-    if starts_at >= expires_at:
-        raise HTTPException(
-            status_code=400,
-            detail="starts_at must be before the room expires",
-        )
+    new_expiry = max(expires_at, ends_at + grace)
+    room_expiry_changed = new_expiry != expires_at
+    if room_expiry_changed:
+        room.expires_at = new_expiry
+        session.add(room)
 
     event = session.exec(select(RoomEvent).where(RoomEvent.room_id == room.id)).first()
     if event is None:
         event = RoomEvent(
             room_id=room.id,
             starts_at=starts_at,
+            ends_at=ends_at,
             created_by=address,
         )
         session.add(event)
     else:
         event.starts_at = starts_at
+        event.ends_at = ends_at
         event.updated_at = datetime.now(UTC)
         session.add(event)
     session.commit()
@@ -669,6 +691,8 @@ async def schedule_room_event(
     await chat_manager.broadcast(
         room_name, json.dumps({"type": "event_update", "event": payload})
     )
+    if room_expiry_changed:
+        await manager.broadcast(get_rooms_payload(session))
     return payload
 
 

@@ -23,6 +23,7 @@ export interface RsvpEntry {
 
 export interface RoomEventState {
 	starts_at: string;
+	ends_at: string;
 	created_by: string;
 	created_at: string;
 	updated_at: string;
@@ -87,6 +88,7 @@ function isRoomEventState(value: unknown): value is RoomEventState {
 	const e = value as Record<string, unknown>;
 	return (
 		typeof e.starts_at === 'string' &&
+		typeof e.ends_at === 'string' &&
 		typeof e.created_by === 'string' &&
 		typeof e.created_at === 'string' &&
 		typeof e.updated_at === 'string' &&

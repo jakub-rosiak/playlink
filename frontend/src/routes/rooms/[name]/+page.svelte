@@ -9,7 +9,7 @@
 	} from '$lib/chatStore';
 	import RoomEvent from '$lib/components/RoomEvent.svelte';
 
-	let { data }: { data: PageData } = $props();
+	let { data, form }: { data: PageData; form: { error?: string } | null } = $props();
 
 	let chat = $state<ChatStore | null>(null);
 	let messages = $state<ChatMessage[]>([]);
@@ -17,9 +17,7 @@
 	let input = $state('');
 	let scroller: HTMLDivElement | null = $state(null);
 
-	const members = $derived(
-		data.memberAddresses.map((address) => ({ address }))
-	);
+	const members = $derived(data.members);
 
 	onMount(() => {
 		const store = createChatStore(data.roomName, data.token, {
@@ -110,6 +108,7 @@
 		isMember={true}
 		viewerAddress={data.address}
 		{members}
+		formError={form?.error ?? null}
 	/>
 
 	<div class="chat" bind:this={scroller}>

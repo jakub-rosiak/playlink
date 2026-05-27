@@ -20,6 +20,7 @@ interface RoomDetail {
 	players_max: number;
 	players_active: number;
 	member_addresses: string[];
+	members: { address: string; username: string }[];
 	description: string | null;
 	communicator_link: string | null;
 	requirements: string | null;
@@ -74,6 +75,7 @@ export const load: PageServerLoad = async ({ params, cookies }) => {
 		address,
 		username,
 		memberAddresses: roomDetail.member_addresses,
+		members: roomDetail.members,
 		event: roomDetail.event,
 		isCreator: roomDetail.created_by.toLowerCase() === lower
 	};
@@ -98,12 +100,14 @@ export const actions: Actions = {
 
 		const data = await request.formData();
 		const startsAtRaw = data.get('starts_at');
-		if (typeof startsAtRaw !== 'string') {
-			return fail(400, { error: 'Missing start time' });
+		const endsAtRaw = data.get('ends_at');
+		if (typeof startsAtRaw !== 'string' || typeof endsAtRaw !== 'string') {
+			return fail(400, { error: 'Missing start or end time' });
 		}
-		const isoUtc = localInputToIsoUtc(startsAtRaw);
-		if (!isoUtc) {
-			return fail(400, { error: 'Invalid start time' });
+		const startIso = localInputToIsoUtc(startsAtRaw);
+		const endIso = localInputToIsoUtc(endsAtRaw);
+		if (!startIso || !endIso) {
+			return fail(400, { error: 'Invalid start or end time' });
 		}
 
 		const baseUrl = backendBase();
@@ -116,7 +120,7 @@ export const actions: Actions = {
 						'Content-Type': 'application/json',
 						Authorization: `Bearer ${session}`
 					},
-					body: JSON.stringify({ starts_at: isoUtc })
+					body: JSON.stringify({ starts_at: startIso, ends_at: endIso })
 				}
 			);
 			if (!res.ok) {

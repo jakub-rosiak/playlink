@@ -112,17 +112,14 @@ export const actions: Actions = {
 
 		const baseUrl = backendBase();
 		try {
-			const res = await fetch(
-				`${baseUrl}/rooms/${encodeURIComponent(params.name)}/event`,
-				{
-					method: 'PUT',
-					headers: {
-						'Content-Type': 'application/json',
-						Authorization: `Bearer ${session}`
-					},
-					body: JSON.stringify({ starts_at: startIso, ends_at: endIso })
-				}
-			);
+			const res = await fetch(`${baseUrl}/rooms/${encodeURIComponent(params.name)}/event`, {
+				method: 'PUT',
+				headers: {
+					'Content-Type': 'application/json',
+					Authorization: `Bearer ${session}`
+				},
+				body: JSON.stringify({ starts_at: startIso, ends_at: endIso })
+			});
 			if (!res.ok) {
 				const result = await res.json().catch(() => ({}));
 				return fail(res.status, { error: result.detail || 'Failed to schedule event' });
@@ -139,13 +136,10 @@ export const actions: Actions = {
 
 		const baseUrl = backendBase();
 		try {
-			const res = await fetch(
-				`${baseUrl}/rooms/${encodeURIComponent(params.name)}/event`,
-				{
-					method: 'DELETE',
-					headers: { Authorization: `Bearer ${session}` }
-				}
-			);
+			const res = await fetch(`${baseUrl}/rooms/${encodeURIComponent(params.name)}/event`, {
+				method: 'DELETE',
+				headers: { Authorization: `Bearer ${session}` }
+			});
 			if (!res.ok) {
 				const result = await res.json().catch(() => ({}));
 				return fail(res.status, { error: result.detail || 'Failed to cancel event' });
@@ -168,17 +162,14 @@ export const actions: Actions = {
 
 		const baseUrl = backendBase();
 		try {
-			const res = await fetch(
-				`${baseUrl}/rooms/${encodeURIComponent(params.name)}/event/rsvp`,
-				{
-					method: 'PUT',
-					headers: {
-						'Content-Type': 'application/json',
-						Authorization: `Bearer ${session}`
-					},
-					body: JSON.stringify({ status })
-				}
-			);
+			const res = await fetch(`${baseUrl}/rooms/${encodeURIComponent(params.name)}/event/rsvp`, {
+				method: 'PUT',
+				headers: {
+					'Content-Type': 'application/json',
+					Authorization: `Bearer ${session}`
+				},
+				body: JSON.stringify({ status })
+			});
 			if (!res.ok) {
 				const result = await res.json().catch(() => ({}));
 				return fail(res.status, { error: result.detail || 'Failed to set RSVP' });

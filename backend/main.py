@@ -670,9 +670,7 @@ async def schedule_room_event(
     if starts_at <= now:
         raise HTTPException(status_code=400, detail="starts_at must be in the future")
     if ends_at <= starts_at:
-        raise HTTPException(
-            status_code=400, detail="ends_at must be after starts_at"
-        )
+        raise HTTPException(status_code=400, detail="ends_at must be after starts_at")
 
     # Keep the room alive for the entire event plus a 30-minute grace period
     # so members don't get prune'd out mid-session.

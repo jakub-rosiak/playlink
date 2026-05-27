@@ -11,14 +11,7 @@
 		formError?: string | null;
 	}
 
-	let {
-		event,
-		isCreator,
-		isMember,
-		viewerAddress,
-		members,
-		formError = null
-	}: Props = $props();
+	let { event, isCreator, isMember, viewerAddress, members, formError = null }: Props = $props();
 
 	let editing = $state(false);
 	let draftStart = $state('');

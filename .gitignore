@@ -253,3 +253,11 @@ $RECYCLE.BIN/
 # Could be pushed later on
 AGENT.md
 .env
+
+# Local agent / tooling artifacts
+.claude/
+.playwright-mcp/
+
+# Stray local screenshots
+/d2-rooms-v1.png
+/rooms-v1.png

@@ -1,6 +1,10 @@
 <script lang="ts">
 	import { enhance } from '$app/forms';
 	import type { RoomEventState, RsvpEntry, RsvpStatus } from '$lib/chatStore';
+	import SectionTitle from '$lib/components/chrome/SectionTitle.svelte';
+	import OrnateButton from '$lib/components/chrome/OrnateButton.svelte';
+	import D2DatePicker from '$lib/components/chrome/D2DatePicker.svelte';
+	import D2TimePicker from '$lib/components/chrome/D2TimePicker.svelte';
 
 	interface Props {
 		event: RoomEventState | null;
@@ -14,8 +18,10 @@
 	let { event, isCreator, isMember, viewerAddress, members, formError = null }: Props = $props();
 
 	let editing = $state(false);
-	let draftStart = $state('');
-	let draftEnd = $state('');
+	let draftStartDate = $state<Date | null>(null);
+	let draftEndDate = $state<Date | null>(null);
+	let draftStartTime = $state('18:00');
+	let draftEndTime = $state('20:00');
 	let localError = $state<string | null>(null);
 
 	const viewerLower = $derived(viewerAddress.toLowerCase());
@@ -23,6 +29,110 @@
 	const myRsvp: RsvpEntry | undefined = $derived(
 		event?.rsvps.find((r) => r.address.toLowerCase() === viewerLower)
 	);
+
+	function timeToMinutes(t: string): number {
+		const m = /^(\d{1,2}):(\d{2})$/.exec(t);
+		if (!m) return 0;
+		return parseInt(m[1], 10) * 60 + parseInt(m[2], 10);
+	}
+
+	function formatTimeFromDate(d: Date): string {
+		const pad = (n: number) => n.toString().padStart(2, '0');
+		return `${pad(d.getHours())}:${pad(d.getMinutes())}`;
+	}
+
+	function stripTime(d: Date): Date {
+		return new Date(d.getFullYear(), d.getMonth(), d.getDate());
+	}
+
+	function addDays(d: Date, days: number): Date {
+		return new Date(d.getFullYear(), d.getMonth(), d.getDate() + days);
+	}
+
+	function daysBetween(a: Date, b: Date): number {
+		const ms = stripTime(b).getTime() - stripTime(a).getTime();
+		return Math.round(ms / 86_400_000);
+	}
+
+	function combine(date: Date, time: string): Date | null {
+		const [h, m] = time.split(':').map((n) => parseInt(n, 10));
+		if (Number.isNaN(h) || Number.isNaN(m)) return null;
+		return new Date(date.getFullYear(), date.getMonth(), date.getDate(), h, m, 0, 0);
+	}
+
+	const todayStart = $derived(stripTime(new Date()));
+
+	const endMinDate = $derived(draftStartDate ?? todayStart);
+
+	const startDateTime = $derived.by(() =>
+		draftStartDate ? combine(draftStartDate, draftStartTime) : null
+	);
+
+	const endDateTime = $derived.by(() =>
+		draftEndDate ? combine(draftEndDate, draftEndTime) : null
+	);
+
+	const startsAtIso = $derived(startDateTime ? startDateTime.toISOString() : null);
+	const endsAtIso = $derived(endDateTime ? endDateTime.toISOString() : null);
+
+	const durationLabel = $derived.by(() => {
+		if (!startDateTime || !endDateTime) return null;
+		const ms = endDateTime.getTime() - startDateTime.getTime();
+		if (ms <= 0) return null;
+		const totalMinutes = Math.round(ms / 60000);
+		const days = Math.floor(totalMinutes / 1440);
+		const hours = Math.floor((totalMinutes % 1440) / 60);
+		const minutes = totalMinutes % 60;
+		const parts: string[] = [];
+		if (days > 0) parts.push(`${days}d`);
+		if (hours > 0) parts.push(`${hours}h`);
+		if (minutes > 0 && days === 0) parts.push(`${minutes}m`);
+		return parts.join(' ') || '0m';
+	});
+
+	const crossesMidnight = $derived.by(() => {
+		if (!draftStartDate || !draftEndDate) return false;
+		return daysBetween(draftStartDate, draftEndDate) > 0;
+	});
+
+	function onStartDateChange(d: Date | null) {
+		const prev = draftStartDate;
+		draftStartDate = d;
+		if (!d) return;
+		if (!draftEndDate) {
+			draftEndDate = d;
+			return;
+		}
+		if (prev) {
+			const offset = daysBetween(prev, draftEndDate);
+			draftEndDate = addDays(d, Math.max(0, offset));
+		} else if (draftEndDate.getTime() < d.getTime()) {
+			draftEndDate = d;
+		}
+		bumpEndIfOverlap();
+	}
+
+	function onEndDateChange(d: Date | null) {
+		draftEndDate = d;
+	}
+
+	function onStartTimeChange(v: string) {
+		draftStartTime = v;
+		bumpEndIfOverlap();
+	}
+
+	function onEndTimeChange(v: string) {
+		draftEndTime = v;
+		bumpEndIfOverlap();
+	}
+
+	function bumpEndIfOverlap() {
+		if (!draftStartDate || !draftEndDate) return;
+		if (daysBetween(draftStartDate, draftEndDate) !== 0) return;
+		if (timeToMinutes(draftEndTime) <= timeToMinutes(draftStartTime)) {
+			draftEndDate = addDays(draftStartDate, 1);
+		}
+	}
 
 	function startEditing() {
 		editing = true;
@@ -33,24 +143,25 @@
 		const endSeed = event?.ends_at
 			? new Date(event.ends_at)
 			: new Date(startSeed.getTime() + 2 * 60 * 60 * 1000);
-		draftStart = formatLocalForInput(startSeed);
-		draftEnd = formatLocalForInput(endSeed);
+		draftStartDate = stripTime(startSeed);
+		draftEndDate = stripTime(endSeed);
+		draftStartTime = formatTimeFromDate(startSeed);
+		draftEndTime = formatTimeFromDate(endSeed);
 	}
 
 	function cancelEditing() {
 		editing = false;
-		draftStart = '';
-		draftEnd = '';
 		localError = null;
 	}
 
 	function validateDraft(): string | null {
-		if (!draftStart || !draftEnd) return 'Please pick both start and end times.';
-		const s = new Date(draftStart).getTime();
-		const e = new Date(draftEnd).getTime();
-		if (Number.isNaN(s) || Number.isNaN(e)) return 'Invalid date selection.';
-		if (e <= s) return 'End time must be after the start time.';
-		if (s <= Date.now()) return 'Start time must be in the future.';
+		if (!draftStartDate) return 'Please pick a start date.';
+		if (!draftEndDate) return 'Please pick an end date.';
+		if (!startsAtIso || !endsAtIso) return 'Please pick start and end times.';
+		const startMs = new Date(startsAtIso).getTime();
+		const endMs = new Date(endsAtIso).getTime();
+		if (endMs <= startMs) return 'End must be after the start.';
+		if (startMs <= Date.now()) return 'Start must be in the future.';
 		return null;
 	}
 
@@ -62,14 +173,6 @@
 		} else {
 			localError = null;
 		}
-	}
-
-	function formatLocalForInput(d: Date): string {
-		const pad = (n: number) => n.toString().padStart(2, '0');
-		return (
-			`${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}` +
-			`T${pad(d.getHours())}:${pad(d.getMinutes())}`
-		);
 	}
 
 	function fmtFull(iso: string): string {
@@ -98,8 +201,24 @@
 		}
 	}
 
+	function sameDay(a: string, b: string): boolean {
+		const da = new Date(a);
+		const db = new Date(b);
+		return (
+			da.getFullYear() === db.getFullYear() &&
+			da.getMonth() === db.getMonth() &&
+			da.getDate() === db.getDate()
+		);
+	}
+
 	const startsAtFormatted = $derived(event ? fmtFull(event.starts_at) : '');
-	const endsAtFormatted = $derived(event ? fmtTime(event.ends_at) : '');
+	const endsAtFormatted = $derived(
+		event
+			? sameDay(event.starts_at, event.ends_at)
+				? fmtTime(event.ends_at)
+				: fmtFull(event.ends_at)
+			: ''
+	);
 
 	let now = $state(new Date());
 
@@ -166,19 +285,21 @@
 	}
 
 	function statusLabel(status: RsvpStatus | null): string {
-		if (status === 'present') return 'PRESENT';
-		if (status === 'absent') return 'ABSENT';
-		if (status === 'maybe') return 'MAYBE';
-		return 'NO RESPONSE';
+		if (status === 'present') return 'Present';
+		if (status === 'absent') return 'Absent';
+		if (status === 'maybe') return 'Maybe';
+		return 'No Response';
 	}
 
 	const errorToShow = $derived(localError ?? formError ?? null);
 </script>
 
 <section class="event-panel">
-	<div class="event-header">
-		<span class="eyebrow">— SCHEDULED EVENT</span>
-	</div>
+	<SectionTitle title="Scheduled Event" size="small" tone="gold">
+		{#if event}
+			<span class="trail-countdown">{countdown}</span>
+		{/if}
+	</SectionTitle>
 
 	{#if errorToShow}
 		<p class="error-msg">{errorToShow}</p>
@@ -188,9 +309,9 @@
 		<div class="empty">
 			{#if isCreator}
 				<p class="empty-text">No event scheduled. Pick a moment for the warband.</p>
-				<button type="button" class="btn btn-primary" onclick={startEditing}>
-					[ SCHEDULE EVENT ]
-				</button>
+				<OrnateButton variant="primary" size="sm" onclick={startEditing}>
+					Schedule Event
+				</OrnateButton>
 			{:else}
 				<p class="empty-text">No event scheduled yet. The room creator can pick a time.</p>
 			{/if}
@@ -200,17 +321,16 @@
 	{#if event && !editing}
 		<div class="event-meta">
 			<div class="event-time">
-				<span class="time-value">{startsAtFormatted}</span>
+				<span class="time-value small-caps">{startsAtFormatted}</span>
 				<span class="time-end">→ ends {endsAtFormatted}</span>
-				<span class="countdown">{countdown}</span>
 			</div>
 			{#if isCreator}
 				<div class="creator-actions">
-					<button type="button" class="btn btn-secondary" onclick={startEditing}>
-						[ RESCHEDULE ]
-					</button>
-					<form method="POST" action="?/cancelEvent" use:enhance style="display: contents;">
-						<button type="submit" class="btn btn-danger">[ CANCEL EVENT ]</button>
+					<OrnateButton variant="secondary" size="sm" onclick={startEditing}>
+						Reschedule
+					</OrnateButton>
+					<form method="POST" action="?/cancelEvent" use:enhance class="inline-form">
+						<OrnateButton variant="danger" size="sm" type="submit">Cancel Event</OrnateButton>
 					</form>
 				</div>
 			{/if}
@@ -218,18 +338,18 @@
 
 		{#if isMember}
 			<div class="rsvp-controls">
-				<span class="rsvp-label">YOUR RSVP</span>
+				<span class="micro-label small-caps">Your RSVP</span>
 				<div class="rsvp-buttons">
 					{#each ['present', 'maybe', 'absent'] as status (status)}
-						<form method="POST" action="?/setRsvp" use:enhance>
+						<form method="POST" action="?/setRsvp" use:enhance class="rsvp-form">
 							<input type="hidden" name="status" value={status} />
 							<button
 								type="submit"
-								class="rsvp-btn"
+								class="rsvp-btn small-caps"
 								class:active={myRsvp?.status === status}
 								data-status={status}
 							>
-								[ {statusLabel(status as RsvpStatus)} ]
+								{statusLabel(status as RsvpStatus)}
 							</button>
 						</form>
 					{/each}
@@ -238,23 +358,23 @@
 		{/if}
 
 		<div class="roster">
-			<span class="roster-label">RSVP ROSTER</span>
+			<span class="micro-label small-caps">RSVP Roster</span>
 			<div class="rsvp-summary">
-				<span class="summary-pill" data-status="present">
+				<span class="summary-pill small-caps" data-status="present">
 					<span class="dot"></span>
-					{rsvpCounts.present} PRESENT
+					{rsvpCounts.present} Present
 				</span>
-				<span class="summary-pill" data-status="maybe">
+				<span class="summary-pill small-caps" data-status="maybe">
 					<span class="dot"></span>
-					{rsvpCounts.maybe} MAYBE
+					{rsvpCounts.maybe} Maybe
 				</span>
-				<span class="summary-pill" data-status="absent">
+				<span class="summary-pill small-caps" data-status="absent">
 					<span class="dot"></span>
-					{rsvpCounts.absent} ABSENT
+					{rsvpCounts.absent} Absent
 				</span>
-				<span class="summary-pill" data-status="none">
+				<span class="summary-pill small-caps" data-status="none">
 					<span class="dot"></span>
-					{rsvpCounts.none} NO RESPONSE
+					{rsvpCounts.none} No Response
 				</span>
 			</div>
 			{#if rosterEntries.length === 0}
@@ -263,8 +383,8 @@
 				<ul class="roster-list">
 					{#each rosterEntries as entry (entry.address)}
 						<li class="roster-row" data-status={entry.status ?? 'none'}>
-							<span class="roster-name">{entry.username}</span>
-							<span class="roster-status">{statusLabel(entry.status)}</span>
+							<span class="roster-name small-caps">{entry.username}</span>
+							<span class="roster-status small-caps">{statusLabel(entry.status)}</span>
 						</li>
 					{/each}
 				</ul>
@@ -287,19 +407,57 @@
 				};
 			}}
 		>
-			<label class="schedule-label">
-				<span class="rsvp-label">START (LOCAL TIME)</span>
-				<input type="datetime-local" name="starts_at" bind:value={draftStart} required />
-			</label>
-			<label class="schedule-label">
-				<span class="rsvp-label">END (LOCAL TIME)</span>
-				<input type="datetime-local" name="ends_at" bind:value={draftEnd} required />
-			</label>
+			<input type="hidden" name="starts_at" value={startsAtIso ?? ''} />
+			<input type="hidden" name="ends_at" value={endsAtIso ?? ''} />
+
+			<div class="schedule-grid">
+				<div class="field group-label start-label">
+					<span class="micro-label small-caps">Start</span>
+				</div>
+				<div class="field date-field start-date">
+					<D2DatePicker
+						value={draftStartDate}
+						onChange={onStartDateChange}
+						min={todayStart}
+						placeholder="Pick a date"
+						ariaLabel="Start date"
+					/>
+				</div>
+				<div class="field time-field start-time">
+					<D2TimePicker
+						value={draftStartTime}
+						onChange={onStartTimeChange}
+						ariaLabel="Start time"
+					/>
+				</div>
+
+				<div class="field group-label end-label">
+					<span class="micro-label small-caps">
+						End
+						{#if durationLabel}
+							<span class="duration-badge">{durationLabel}</span>
+						{:else if crossesMidnight}
+							<span class="duration-badge">overnight</span>
+						{/if}
+					</span>
+				</div>
+				<div class="field date-field end-date">
+					<D2DatePicker
+						value={draftEndDate}
+						onChange={onEndDateChange}
+						min={endMinDate}
+						placeholder="Pick a date"
+						ariaLabel="End date"
+					/>
+				</div>
+				<div class="field time-field end-time">
+					<D2TimePicker value={draftEndTime} onChange={onEndTimeChange} ariaLabel="End time" />
+				</div>
+			</div>
+
 			<div class="schedule-actions">
-				<button type="submit" class="btn btn-primary">[ SAVE ]</button>
-				<button type="button" class="btn btn-secondary" onclick={cancelEditing}>
-					[ CANCEL ]
-				</button>
+				<OrnateButton variant="primary" size="sm" type="submit">Save</OrnateButton>
+				<OrnateButton variant="ghost" size="sm" onclick={cancelEditing}>Cancel</OrnateButton>
 			</div>
 		</form>
 	{/if}
@@ -307,56 +465,51 @@
 
 <style>
 	.event-panel {
-		background: rgba(255, 255, 255, 0.03);
-		border: 1px solid rgba(227, 188, 116, 0.2);
-		border-radius: 12px;
-		padding: 1rem 1.2rem;
+		position: relative;
 		display: flex;
 		flex-direction: column;
-		gap: 0.9rem;
+		gap: 0.7rem;
+		padding: 0.85rem 1rem 0.95rem;
+		background: linear-gradient(180deg, var(--stone-2) 0%, var(--stone-1) 100%);
+		border: 1px solid var(--stone-5);
+		box-shadow:
+			var(--bevel-in),
+			inset 0 0 30px rgba(0, 0, 0, 0.25);
 	}
 
-	.event-header {
-		display: flex;
-		justify-content: space-between;
-		align-items: center;
-	}
-
-	.eyebrow,
-	.rsvp-label,
-	.roster-label {
-		font-family: ui-monospace, SFMono-Regular, monospace;
+	.trail-countdown {
+		font-family: var(--font-mono);
 		font-size: 0.7rem;
-		letter-spacing: 0.18em;
-		color: #8c877a;
-		text-transform: uppercase;
+		color: var(--gold-base);
+		letter-spacing: 0.1em;
 	}
 
 	.error-msg {
 		margin: 0;
-		padding: 0.6rem 0.9rem;
-		border: 1px solid #ff6b6b;
-		background: rgba(255, 107, 107, 0.1);
-		border-radius: 4px;
-		color: #ff6b6b;
-		font-family: ui-monospace, monospace;
-		font-size: 0.8rem;
+		padding: 0.55rem 0.8rem;
+		border: 1px solid #4a1414;
+		background: rgba(181, 54, 54, 0.08);
+		color: var(--blood-bright);
+		font-family: var(--font-mono);
+		font-size: 0.75rem;
+		letter-spacing: 0.05em;
 	}
 
 	.empty {
-		border: 1px dashed rgba(227, 188, 116, 0.3);
-		border-radius: 8px;
-		padding: 1rem;
 		display: flex;
 		flex-direction: column;
 		gap: 0.6rem;
 		align-items: flex-start;
+		padding: 0.35rem 0;
 	}
 
 	.empty-text {
 		margin: 0;
-		color: rgba(244, 236, 216, 0.6);
-		font-size: 0.9rem;
+		font-family: var(--font-display);
+		font-size: 0.82rem;
+		color: var(--bone-dim);
+		letter-spacing: 0.02em;
+		font-style: italic;
 	}
 
 	.event-meta {
@@ -370,132 +523,139 @@
 	.event-time {
 		display: flex;
 		flex-direction: column;
-		gap: 0.2rem;
+		gap: 0.15rem;
 	}
 
 	.time-value {
-		font-family: ui-monospace, SFMono-Regular, monospace;
-		font-size: 1.25rem;
-		color: #f1e9cd;
-		letter-spacing: 0.02em;
-		text-transform: uppercase;
+		font-family: var(--font-display);
+		font-size: 1rem;
+		color: var(--bone-bright);
+		letter-spacing: var(--track-loose);
 	}
 
 	.time-end {
-		font-family: ui-monospace, monospace;
-		font-size: 0.8rem;
-		color: rgba(244, 236, 216, 0.55);
+		font-family: var(--font-mono);
+		font-size: 0.7rem;
+		color: var(--bone-dim);
 		letter-spacing: 0.06em;
-	}
-
-	.countdown {
-		font-family: ui-monospace, monospace;
-		font-size: 0.85rem;
-		color: #e3bc74;
 	}
 
 	.creator-actions {
 		display: flex;
-		gap: 0.5rem;
-	}
-
-	.rsvp-controls {
-		display: flex;
-		flex-direction: column;
-		gap: 0.5rem;
-	}
-
-	.rsvp-buttons {
-		display: flex;
-		gap: 0.5rem;
+		gap: 0.45rem;
 		flex-wrap: wrap;
 	}
 
-	.rsvp-btn {
-		flex: 1;
-		min-width: 110px;
-		background: transparent;
-		border: 1px solid #28251e;
-		color: #8c877a;
-		padding: 0.55rem 0.8rem;
-		font-family: ui-monospace, monospace;
-		font-size: 0.7rem;
-		letter-spacing: 0.15em;
-		cursor: pointer;
-		border-radius: 4px;
-		transition:
-			border-color 0.2s,
-			color 0.2s,
-			background 0.2s;
+	.inline-form {
+		display: contents;
 	}
 
-	.rsvp-btn:hover {
-		border-color: #e3bc74;
-		color: #e3bc74;
-	}
-
-	.rsvp-btn.active[data-status='present'] {
-		border-color: #a4ce82;
-		color: #1a1405;
-		background: #a4ce82;
-	}
-	.rsvp-btn.active[data-status='maybe'] {
-		border-color: #e3bc74;
-		color: #1a1405;
-		background: #e3bc74;
-	}
-	.rsvp-btn.active[data-status='absent'] {
-		border-color: #ff6b6b;
-		color: #1a1405;
-		background: #ff6b6b;
-	}
-
+	.rsvp-controls,
 	.roster {
 		display: flex;
 		flex-direction: column;
 		gap: 0.4rem;
 	}
 
+	.micro-label {
+		font-family: var(--font-display);
+		font-size: 0.65rem;
+		color: var(--bone-dim);
+		letter-spacing: var(--track-loose);
+	}
+
+	.rsvp-buttons {
+		display: flex;
+		gap: 0.45rem;
+		flex-wrap: wrap;
+	}
+
+	.rsvp-form {
+		flex: 1;
+		min-width: 110px;
+		display: contents;
+	}
+
+	.rsvp-btn {
+		flex: 1;
+		min-width: 110px;
+		background: #080604;
+		border: 1px solid var(--stone-5);
+		color: var(--bone-dim);
+		padding: 0.5rem 0.8rem;
+		font-family: var(--font-display);
+		font-size: 0.72rem;
+		letter-spacing: var(--track-loose);
+		cursor: pointer;
+		transition:
+			border-color 140ms ease,
+			color 140ms ease,
+			background 140ms ease,
+			box-shadow 140ms ease;
+		box-shadow: var(--bevel-in);
+	}
+
+	.rsvp-btn:hover:not(:disabled) {
+		border-color: var(--gold-muted);
+		color: var(--gold-lit);
+	}
+
+	.rsvp-btn.active[data-status='present'] {
+		border-color: var(--green-base, #6f8f4f);
+		color: #0d0d0d;
+		background: var(--green-base, #a4ce82);
+	}
+	.rsvp-btn.active[data-status='maybe'] {
+		border-color: var(--gold-base);
+		color: #0d0d0d;
+		background: var(--gold-base);
+	}
+	.rsvp-btn.active[data-status='absent'] {
+		border-color: #7a1d1d;
+		color: #f5e8e8;
+		background: #6a1818;
+	}
+
 	.rsvp-summary {
 		display: flex;
 		flex-wrap: wrap;
 		gap: 0.4rem;
-		margin-top: 0.2rem;
+		margin-top: 0.15rem;
 	}
 
 	.summary-pill {
 		display: inline-flex;
 		align-items: center;
 		gap: 0.4rem;
-		padding: 0.35rem 0.7rem;
-		border-radius: 999px;
+		padding: 0.3rem 0.65rem;
 		background: rgba(0, 0, 0, 0.3);
-		border: 1px solid #28251e;
-		font-family: ui-monospace, monospace;
-		font-size: 0.7rem;
-		letter-spacing: 0.12em;
-		color: rgba(244, 236, 216, 0.7);
+		border: 1px solid var(--stone-5);
+		font-family: var(--font-display);
+		font-size: 0.65rem;
+		letter-spacing: var(--track-loose);
+		color: var(--bone-dim);
 	}
 
 	.summary-pill .dot {
-		width: 0.55rem;
-		height: 0.55rem;
+		width: 0.5rem;
+		height: 0.5rem;
 		border-radius: 50%;
-		background: #555;
+		background: var(--stone-5);
 		flex-shrink: 0;
 	}
 
 	.summary-pill[data-status='present'] .dot {
-		background: #a4ce82;
+		background: var(--green-base, #a4ce82);
 	}
 	.summary-pill[data-status='maybe'] .dot {
-		background: #e3bc74;
+		background: var(--gold-base);
 	}
 	.summary-pill[data-status='absent'] .dot {
-		background: #ff6b6b;
+		background: #b53636;
 	}
 	.summary-pill[data-status='none'] .dot {
-		background: rgba(244, 236, 216, 0.3);
+		background: var(--bone-dim);
+		opacity: 0.4;
 	}
 
 	.roster-list {
@@ -504,65 +664,90 @@
 		padding: 0;
 		display: flex;
 		flex-direction: column;
-		gap: 0.25rem;
+		gap: 0;
 	}
 
 	.roster-row {
 		display: flex;
 		justify-content: space-between;
-		padding: 0.45rem 0.7rem;
-		background: rgba(0, 0, 0, 0.25);
-		border-radius: 4px;
-		font-family: ui-monospace, monospace;
-		font-size: 0.8rem;
+		align-items: center;
+		padding: 0.4rem 0.55rem;
+		border-bottom: 1px solid var(--stone-5);
+		font-family: var(--font-display);
+		font-size: 0.78rem;
+	}
+
+	.roster-row:last-child {
+		border-bottom: 0;
 	}
 
 	.roster-name {
-		color: #f1e9cd;
+		color: var(--bone);
+		letter-spacing: var(--track-loose);
 	}
 
 	.roster-status {
-		letter-spacing: 0.12em;
+		font-size: 0.7rem;
+		letter-spacing: var(--track-loose);
 	}
 
 	.roster-row[data-status='present'] .roster-status {
-		color: #a4ce82;
+		color: var(--green-base, #a4ce82);
 	}
 	.roster-row[data-status='maybe'] .roster-status {
-		color: #e3bc74;
+		color: var(--gold-base);
 	}
 	.roster-row[data-status='absent'] .roster-status {
-		color: #ff6b6b;
+		color: #b53636;
 	}
 	.roster-row[data-status='none'] .roster-status {
-		color: rgba(244, 236, 216, 0.4);
+		color: var(--bone-dim);
+		opacity: 0.55;
 	}
 
 	.schedule-form {
 		display: flex;
 		flex-direction: column;
-		gap: 0.7rem;
+		gap: 0.75rem;
 	}
 
-	.schedule-label {
+	.schedule-grid {
+		display: grid;
+		grid-template-columns: auto minmax(180px, 2fr) minmax(110px, 1fr);
+		gap: 0.45rem 0.6rem;
+		align-items: center;
+	}
+
+	.field {
 		display: flex;
 		flex-direction: column;
-		gap: 0.35rem;
+		gap: 0.3rem;
+		min-width: 0;
 	}
 
-	.schedule-form input[type='datetime-local'] {
-		background: #141415;
-		border: 1px solid #28251e;
-		color: #f1e9cd;
-		padding: 0.6rem;
-		border-radius: 4px;
-		font-family: ui-monospace, monospace;
-		font-size: 0.9rem;
+	.group-label {
+		justify-content: flex-start;
+		min-width: 90px;
 	}
 
-	.schedule-form input[type='datetime-local']:focus {
-		outline: none;
-		border-color: #e3bc74;
+	.field .micro-label {
+		display: inline-flex;
+		align-items: center;
+		gap: 0.5rem;
+		flex-wrap: nowrap;
+		white-space: nowrap;
+	}
+
+	.duration-badge {
+		font-family: var(--font-mono);
+		font-size: 0.6rem;
+		color: var(--gold-base);
+		letter-spacing: 0.1em;
+		text-transform: uppercase;
+		padding: 0.05rem 0.4rem;
+		border: 1px solid var(--gold-deep);
+		background: rgba(227, 188, 116, 0.08);
+		white-space: nowrap;
 	}
 
 	.schedule-actions {
@@ -570,47 +755,17 @@
 		gap: 0.5rem;
 	}
 
-	.btn {
-		font-family: ui-monospace, monospace;
-		font-size: 0.7rem;
-		letter-spacing: 0.15em;
-		padding: 0.55rem 0.9rem;
-		border-radius: 4px;
-		cursor: pointer;
-		text-transform: uppercase;
-		transition: all 0.2s;
-	}
-
-	.btn-primary {
-		background: #e3bc74;
-		color: #1a1405;
-		border: none;
-		font-weight: 600;
-	}
-
-	.btn-primary:hover {
-		background: #f1cf8f;
-	}
-
-	.btn-secondary {
-		background: transparent;
-		color: #a39c8c;
-		border: 1px solid #3d3930;
-	}
-
-	.btn-secondary:hover {
-		border-color: #e3bc74;
-		color: #e3bc74;
-	}
-
-	.btn-danger {
-		background: transparent;
-		color: #ff6b6b;
-		border: 1px solid rgba(255, 107, 107, 0.5);
-	}
-
-	.btn-danger:hover {
-		background: rgba(255, 107, 107, 0.1);
-		border-color: #ff6b6b;
+	@media (max-width: 560px) {
+		.schedule-grid {
+			grid-template-columns: 1fr 1fr;
+			gap: 0.45rem;
+		}
+		.group-label {
+			grid-column: 1 / -1;
+			justify-content: flex-start;
+		}
+		.date-field {
+			grid-column: 1 / -1;
+		}
 	}
 </style>

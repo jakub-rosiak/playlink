@@ -11,7 +11,7 @@ export const load: PageServerLoad = async ({ cookies }) => {
 	const session = cookies.get('session');
 
 	if (!session) {
-		return { user: null, jwt: null };
+		return { user: null };
 	}
 
 	try {
@@ -19,19 +19,18 @@ export const load: PageServerLoad = async ({ cookies }) => {
 
 		if (!decoded?.sub || !decoded?.username) {
 			cookies.delete('session', { path: '/' });
-			return { user: null, jwt: null };
+			return { user: null };
 		}
 
 		return {
 			user: {
 				address: decoded.sub,
 				username: decoded.username
-			},
-			jwt: session
+			}
 		};
 	} catch {
 		cookies.delete('session', { path: '/' });
-		return { user: null, jwt: null };
+		return { user: null };
 	}
 };
 

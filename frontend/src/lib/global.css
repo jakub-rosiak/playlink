@@ -1,3 +1,11 @@
+@import url('https://fonts.googleapis.com/css2?family=Cinzel:wght@400;500;600;700;800;900&family=Marcellus&family=MedievalSharp&display=swap');
+@import './styles/tokens.css';
+@import './styles/chrome.css';
+
+/* --- Fonts ---
+   Exocet is the original D2 display face but is proprietary and not bundled.
+   If a license-cleared TTF/WOFF lands in /static/fonts/, the @font-face below
+   activates and `--font-display` will pick it up before Cinzel. */
 @font-face {
 	font-family: 'Exocet';
 	src: url('/fonts/ExocetLight.ttf') format('truetype');
@@ -14,45 +22,98 @@
 	font-style: normal;
 }
 
-:root {
-	--font-main: 'Exocet';
-
-	--font-color: #e4d8b8;
-	--bg-color: #0d0d0d;
-	--link-color: #e3bc74;
+/* --- Resets --- */
+*,
+*::before,
+*::after {
+	box-sizing: border-box;
 }
 
+html,
 body {
-	color: var(--font-color);
-	background-color: var(--bg-color);
 	margin: 0;
 	padding: 0;
+	min-height: 100%;
+	background-color: var(--bg-page);
+	color: var(--font-color);
+	font-family: var(--font-body);
+	font-size: 16px;
+	line-height: 1.5;
+	-webkit-font-smoothing: antialiased;
+	text-rendering: optimizeLegibility;
 }
 
 a {
 	color: var(--link-color);
 	text-decoration: none;
+	transition: color 0.18s ease;
+}
+a:hover {
+	color: var(--gold-lit);
 }
 
-/* --- KURSORY --- */
+button {
+	font-family: inherit;
+	color: inherit;
+}
 
+input,
+select,
+textarea {
+	font-family: inherit;
+	color: var(--bone);
+	border-radius: 0;
+}
+
+::selection {
+	background: var(--gold-base);
+	color: var(--stone-0);
+}
+
+/* --- Cursors (Diablo II set) --- */
+/* No native cursors anywhere — every element falls back to the D2 normal cursor. */
+*,
+*::before,
+*::after {
+	cursor: url('/cursor/normal.cur'), default !important;
+}
 html,
 body {
-	cursor: url('/cursor/normal.cur'), auto;
+	cursor: url('/cursor/normal.cur'), default !important;
 }
-
 body.waiting,
 body.waiting * {
 	cursor: url('/cursor/busy.ani'), wait !important;
 }
-
+/* Interactive / clickable surfaces — D2 hand */
 .help,
 abbr,
 [title],
-a[href] {
-	cursor: url('/cursor/help.cur'), help;
+a,
+a[href],
+button,
+[role='button'],
+[role='tab'],
+[role='link'],
+[role='menuitem'],
+[role='option'],
+[role='switch'],
+[role='checkbox'],
+[role='radio'],
+summary,
+select,
+option,
+label[for],
+input[type='checkbox'],
+input[type='radio'],
+input[type='submit'],
+input[type='reset'],
+input[type='button'],
+input[type='file'],
+input[type='color'] {
+	cursor: url('/cursor/help.cur'), pointer !important;
 }
-
+/* Text content — D2 text cursor */
 p,
 h1,
 h2,
@@ -64,13 +125,90 @@ span,
 li,
 td,
 th,
-label {
-	cursor: url('/cursor/text.cur'), text;
+label,
+code,
+pre,
+blockquote,
+small,
+strong,
+em,
+dt,
+dd {
+	cursor: url('/cursor/text.cur'), text !important;
 }
-
+/* Editable inputs — D2 write cursor */
 input[type='text'],
 input[type='email'],
 input[type='password'],
-textarea {
-	cursor: url('/cursor/write.cur'), text;
+input[type='number'],
+input[type='search'],
+input[type='tel'],
+input[type='url'],
+input[type='date'],
+input[type='time'],
+input[type='datetime-local'],
+input[type='month'],
+input[type='week'],
+input:not([type]),
+textarea,
+[contenteditable='true'],
+[contenteditable=''] {
+	cursor: url('/cursor/write.cur'), text !important;
+}
+/* Disabled / blocked — D2 normal cursor, no native not-allowed */
+:disabled,
+[disabled],
+[aria-disabled='true'],
+button:disabled,
+input:disabled,
+select:disabled,
+textarea:disabled {
+	cursor: url('/cursor/normal.cur'), not-allowed !important;
+}
+/* Busy / progress — D2 busy animation */
+[aria-busy='true'] {
+	cursor: url('/cursor/busy.ani'), progress !important;
+}
+
+/* --- Default heading reset (we'll style per-component) --- */
+h1,
+h2,
+h3,
+h4,
+h5,
+h6 {
+	font-family: var(--font-display);
+	font-weight: 700;
+	margin: 0;
+	letter-spacing: var(--track-display);
+}
+
+/* --- Disable iOS tap highlight --- */
+* {
+	-webkit-tap-highlight-color: transparent;
+}
+
+/* --- Touch-device overrides ---
+   On touch UAs, hover-only feedback is invisible. Make :active states
+   visible and bump key sizes so users can hit them with a thumb. */
+@media (hover: none) and (pointer: coarse) {
+	button:active,
+	a:active,
+	[role='button']:active {
+		opacity: 0.85;
+		transform: scale(0.98);
+	}
+
+	html,
+	body {
+		font-size: 17px;
+	}
+}
+
+/* --- Focus visible: better fallback for select / inputs --- */
+select:focus-visible,
+input:focus-visible,
+textarea:focus-visible {
+	outline: 1px solid var(--gold-lit);
+	outline-offset: 2px;
 }
